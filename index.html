@@ -56,6 +56,10 @@
     #printModal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
       align-items:center; justify-content:center; padding:16px; z-index:10}
     #printWrap{background:#0b0f14; padding:16px; border-radius:12px}
+
+    /* Filtros */
+    .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0 0}
+    .counter{color:var(--muted); font-size:12px}
   </style>
 </head>
 <body>
@@ -67,6 +71,7 @@
 </header>
 
 <div class="wrap grid">
+  <!-- Formulario CAPA -->
   <section class="card grid">
     <div class="grid grid3">
       <div>
@@ -238,6 +243,7 @@
     </div>
   </section>
 
+  <!-- Lista + Filtros -->
   <section class="card">
     <div class="row" style="justify-content:space-between; align-items:center">
       <h3 style="margin:0">Guardadas</h3>
@@ -246,33 +252,54 @@
         <button class="btn ghost" id="resetID">Reiniciar ID</button>
       </div>
     </div>
+
+    <div class="filters">
+      <div>
+        <label>Filtrar por Semana</label>
+        <select id="fSemana" style="min-width:110px"></select>
+      </div>
+      <div>
+        <label>Filtrar por Cliente</label>
+        <input id="fCliente" type="text" placeholder="Nombre contiene…"/>
+      </div>
+      <button class="btn" id="limpiarFiltros">Limpiar filtros</button>
+      <span class="counter" id="countInfo"></span>
+    </div>
+
     <div id="lista" class="list"></div>
   </section>
 
   <div id="printModal"><div id="printWrap"><div id="printCard"></div></div></div>
 </div>
 
+<!-- libs PDF -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 (() => {
-  const APP_VERSION = '2025.11.09-01';
+  const APP_VERSION = '2025.11.09-02';
   document.getElementById('verTag').textContent = 'v' + APP_VERSION;
 
-  // --- SW: sin caché estático (rompe caché al actualizar) ---
+  // --- Service Worker (rompe caché) ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v='+APP_VERSION)
-      .catch(()=>{/*ignore*/});
+    navigator.serviceWorker.register('./sw.js?v='+APP_VERSION).catch(()=>{});
   }
 
-  // Utilidades
+  // Utils
   const $ = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
+  const byId = id => document.getElementById(id);
 
-  // Semana S01..S52
-  const selSemana = $('#semana');
-  selSemana.innerHTML = '<option value="">— Seleccionar —</option>' +
-    Array.from({length:52},(_,i)=>`<option value="S${String(i+1).padStart(2,'0')}">S${String(i+1).padStart(2,'0')}</option>`).join('');
+  // Semana opciones (form y filtros)
+  function fillWeeks(selectEl, includeAll=false){
+    const base = includeAll ? '<option value="">Todas</option>' : '<option value="">— Seleccionar —</option>';
+    selectEl.innerHTML = base + Array.from({length:52},(_,i)=>{
+      const w = String(i+1).padStart(2,'0');
+      return `<option value="S${w}">S${w}</option>`;
+    }).join('');
+  }
+  fillWeeks(byId('semana'), false);
+  fillWeeks(byId('fSemana'), true);
 
   // ID auto (bloqueado)
   function nextID(){
@@ -281,10 +308,7 @@
     localStorage.setItem(key, String(n));
     return 'CAPA-' + String(n).padStart(3,'0');
   }
-  function ensureID(){
-    const v = $('#id').value.trim();
-    if(!v){ $('#id').value = nextID(); }
-  }
+  function ensureID(){ if(!byId('id').value.trim()) byId('id').value = nextID(); }
   ensureID();
 
   // Semáforo automático
@@ -306,18 +330,14 @@
   };
   const gravityColor = (g) => ({'Menor':'Verde','Mayor':'Amarillo','Crítica':'Rojo'}[g] || 'Verde');
   const colorRank = c => ({'Verde':1,'Amarillo':2,'Rojo':3}[c]||1);
-  function worstColor(a,b){ return colorRank(a) >= colorRank(b) ? a : b; }
+  const worstColor = (a,b) => (colorRank(a) >= colorRank(b) ? a : b);
 
   function getManualSem(){ const r = $$('input[name="sem"]:checked')[0]; return r? r.value : ''; }
-  function setManualSem(color){
-    $$('input[name="sem"]').forEach(r => r.checked = (r.value===color));
-  }
-
+  function setManualSem(color){ $$('input[name="sem"]').forEach(r => r.checked = (r.value===color)); }
   function getDonde(){
     const v = $$('.donde:checked').map(x=>x.value);
     return v.slice(0,2).join(', ');
   }
-
   function getResp(name, otherId){
     const r = $$(`input[name="${name}"]:checked`)[0];
     if(!r) return '';
@@ -331,41 +351,40 @@
   function readForm(){
     ensureID();
     return {
-      id: $('#id').value.trim(),
-      semana: $('#semana').value,
-      cntr: $('#cntr').value.trim(),
-      cliente: $('#cliente').value.trim(),
-      estado: $('#estado').value,
+      id: byId('id').value.trim(),
+      semana: byId('semana').value,
+      cntr: byId('cntr').value.trim(),
+      cliente: byId('cliente').value.trim(),
+      estado: byId('estado').value,
       semaforo: getManualSem(),
-      criterio: $('#criterio').value.trim(),
-      quePaso: $('#quePaso').value.trim(),
-      cuando: $('#cuando').value,
-      gravedad: $('#gravedad').value,
+      criterio: byId('criterio').value.trim(),
+      quePaso: byId('quePaso').value.trim(),
+      cuando: byId('cuando').value,
+      gravedad: byId('gravedad').value,
       donde: getDonde(),
-      quien: $('#quien').value,
-      causa: $('#causa').value.trim(),
-      evidencia: $('#evidencia').value.trim(),
-      contencion: $('#contencion').value.trim(),
+      quien: byId('quien').value,
+      causa: byId('causa').value.trim(),
+      evidencia: byId('evidencia').value.trim(),
+      contencion: byId('contencion').value.trim(),
       respC: getResp('respC','#respC_otro'),
-      fechaC: $('#fechaC').value,
-      definitiva: $('#definitiva').value.trim(),
+      fechaC: byId('fechaC').value,
+      definitiva: byId('definitiva').value.trim(),
       respD: getResp('respD','#respD_otro'),
-      fechaD: $('#fechaD').value,
-      cierre: $('#cierre').value,
-      verif: $('#verif').value.trim(),
+      fechaD: byId('fechaD').value,
+      cierre: byId('cierre').value,
+      verif: byId('verif').value.trim(),
       ts: Date.now()
     };
   }
 
   function applyAutoSemIfNeeded(){
-    const auto = $('#autoSem').checked;
+    const auto = byId('autoSem').checked;
     if(!auto) return;
-    const cUrg = urgencyColor($('#cuando').value);
-    const cGrv = gravityColor($('#gravedad').value);
+    const cUrg = urgencyColor(byId('cuando').value);
+    const cGrv = gravityColor(byId('gravedad').value);
     setManualSem(worstColor(cUrg, cGrv));
   }
 
-  // Validaciones mínimas
   function validateMinimal(d){
     const missing=[];
     if(!d.semana) missing.push('Semana');
@@ -378,8 +397,9 @@
   }
 
   // Persistencia
-  function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
-  function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
+  const loadAll = () => { try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } };
+  const saveAll = (arr) => localStorage.setItem('capa_entries', JSON.stringify(arr));
+
   function upsert(d){
     const arr = loadAll();
     const i = arr.findIndex(x=>x.id===d.id);
@@ -387,10 +407,28 @@
     saveAll(arr); renderList();
   }
 
+  // Filtros
+  function getFilters(){
+    return {
+      semana: byId('fSemana').value,
+      cliente: byId('fCliente').value.trim().toLowerCase()
+    };
+  }
+  function applyFilters(arr){
+    const f = getFilters();
+    return arr.filter(d=>{
+      const okW = !f.semana || (d.semana===f.semana);
+      const okC = !f.cliente || ((d.cliente||'').toLowerCase().includes(f.cliente));
+      return okW && okC;
+    });
+  }
+
   function renderList(){
-    const arr = loadAll();
-    const wrap = $('#lista'); wrap.innerHTML = '';
-    if(!arr.length){ wrap.innerHTML = '<div class="hint">Sin registros todavía.</div>'; return; }
+    const arrAll = loadAll();
+    const arr = applyFilters(arrAll);
+    const wrap = byId('lista'); wrap.innerHTML = '';
+    byId('countInfo').textContent = arr.length + ' / ' + arrAll.length + ' registros';
+    if(!arr.length){ wrap.innerHTML = '<div class="hint">Sin registros con esos filtros.</div>'; return; }
     arr.forEach(d=>{
       const dot = d.semaforo==='Rojo'?'red':(d.semaforo==='Amarillo'?'yellow':'green');
       const el = document.createElement('div');
@@ -404,6 +442,7 @@
           <span class="dot ${dot}"></span>
           <button class="btn" data-id="${d.id}" data-act="pdf">PDF</button>
           <button class="btn" data-id="${d.id}" data-act="load">Abrir</button>
+          <button class="btn" data-id="${d.id}" data-act="dup">Duplicar</button>
           <button class="btn ghost" data-id="${d.id}" data-act="del">Borrar</button>
         </div>`;
       wrap.appendChild(el);
@@ -411,16 +450,17 @@
   }
 
   function fillForm(d){
-    $('#id').value=d.id; $('#semana').value=d.semana; $('#cntr').value=d.cntr;
-    $('#cliente').value=d.cliente; $('#estado').value=d.estado;
-    $('#criterio').value=d.criterio||'';
-    $('#quePaso').value=d.quePaso; $('#cuando').value=d.cuando; $('#gravedad').value=d.gravedad||'Menor';
+    byId('id').value=d.id; byId('semana').value=d.semana; byId('cntr').value=d.cntr;
+    byId('cliente').value=d.cliente; byId('estado').value=d.estado;
+    byId('criterio').value=d.criterio||'';
+    byId('quePaso').value=d.quePaso; byId('cuando').value=d.cuando; byId('gravedad').value=d.gravedad||'Menor';
     $$('.donde').forEach(x=>x.checked = (d.donde||'').split(', ').includes(x.value));
-    $('#quien').value=d.quien; $('#causa').value=d.causa; $('#evidencia').value=d.evidencia;
-    $('#contencion').value=d.contencion; $('#fechaC').value=d.fechaC;
-    $('#definitiva').value=d.definitiva; $('#fechaD').value=d.fechaD;
-    $('#cierre').value=d.cierre; $('#verif').value=d.verif;
+    byId('quien').value=d.quien; byId('causa').value=d.causa; byId('evidencia').value=d.evidencia;
+    byId('contencion').value=d.contencion; byId('fechaC').value=d.fechaC;
+    byId('definitiva').value=d.definitiva; byId('fechaD').value=d.fechaD;
+    byId('cierre').value=d.cierre; byId('verif').value=d.verif;
     $$('input[name="sem"]').forEach(x=>x.checked = (x.value===d.semaforo));
+    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   // PDF
@@ -454,7 +494,7 @@
   }
 
   async function toPDF(d, share=false){
-    const modal = $('#printModal'), card = $('#printCard');
+    const modal = byId('printModal'), card = byId('printCard');
     card.innerHTML = buildPrintCard(d);
     modal.style.display='flex';
     await new Promise(r=>setTimeout(r,60));
@@ -476,62 +516,50 @@
     pdf.save(fname);
   }
 
-  // Eventos
-  $('#autoSem').addEventListener('change', ()=>{
-    const dis = $('#autoSem').checked;
-    $('#semManual').style.pointerEvents = dis ? 'none' : 'auto';
-    $('#semManual').style.opacity = dis ? .6 : 1;
+  // Eventos semáforo auto
+  byId('autoSem').addEventListener('change', ()=>{
+    const dis = byId('autoSem').checked;
+    byId('semManual').style.pointerEvents = dis ? 'none' : 'auto';
+    byId('semManual').style.opacity = dis ? .6 : 1;
     applyAutoSemIfNeeded();
   });
-  $('#cuando').addEventListener('change', applyAutoSemIfNeeded);
-  $('#gravedad').addEventListener('change', applyAutoSemIfNeeded);
+  byId('cuando').addEventListener('change', applyAutoSemIfNeeded);
+  byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
 
-  $('#guardar').addEventListener('click', ()=>{
+  // Botones form
+  byId('guardar').addEventListener('click', ()=>{
     const d = readForm();
     applyAutoSemIfNeeded();
-    d.semaforo = getManualSem(); // asegurar valor final
+    d.semaforo = getManualSem();
     if(!validateMinimal(d)) return;
     upsert(d);
     alert('CAPA guardada: ' + d.id);
   });
-
-  $('#pdf').addEventListener('click', async ()=>{
+  byId('pdf').addEventListener('click', async ()=>{
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,false);
   });
-
-  $('#compartir').addEventListener('click', async ()=>{
+  byId('compartir').addEventListener('click', async ()=>{
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,true);
   });
-
-  $('#limpiar').addEventListener('click', ()=>{
-    const keepID = $('#id').value; // mantener ID actual
-    document.querySelector('form')?.reset();
-    ['cntr','cliente','criterio','quePaso','causa','evidencia','contencion','definitiva','respC_otro','respD_otro','verif'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
-    ['semana','cuando','quien','estado','gravedad'].forEach(id=>$('#'+id).value='');
-    ['fechaC','fechaD','cierre'].forEach(id=>$('#'+id).value='');
+  byId('limpiar').addEventListener('click', ()=>{
+    const keepID = byId('id').value;
+    ['cntr','cliente','criterio','quePaso','causa','evidencia','contencion','definitiva','respC_otro','respD_otro','verif'].forEach(id=>{ const el=byId(id); if(el) el.value=''; });
+    ['semana','cuando','quien','estado','gravedad'].forEach(id=>byId(id).value='');
+    ['fechaC','fechaD','cierre'].forEach(id=>byId(id).value='');
     $$('input[name="sem"]').forEach(x=>x.checked=false);
     $$('.donde').forEach(x=>x.checked=false);
-    $('#autoSem').checked=false; $('#semManual').style.pointerEvents='auto'; $('#semManual').style.opacity=1;
-    $('#id').value = keepID || nextID();
+    byId('autoSem').checked=false; byId('semManual').style.pointerEvents='auto'; byId('semManual').style.opacity=1;
+    byId('id').value = keepID || nextID();
   });
 
-  $('#resetID').addEventListener('click', ()=>{
-    if(confirm('¿Reiniciar contador de ID?')){ localStorage.removeItem('capa_last_id'); $('#id').value=''; ensureID(); }
+  byId('resetID').addEventListener('click', ()=>{
+    if(confirm('¿Reiniciar contador de ID?')){ localStorage.removeItem('capa_last_id'); byId('id').value=''; ensureID(); }
   });
 
-  $('#lista').addEventListener('click', async (ev)=>{
-    const b = ev.target.closest('button'); if(!b) return;
-    const act = b.dataset.act, id=b.dataset.id;
-    const arr = loadAll(); const d = arr.find(x=>x.id===id);
-    if(!d) return;
-    if(act==='load'){ fillForm(d); window.scrollTo({top:0, behavior:'smooth'}); }
-    if(act==='pdf'){ await toPDF(d,false); }
-    if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ localStorage.setItem('capa_entries', JSON.stringify(arr.filter(x=>x.id!==id))); renderList(); } }
-  });
-
-  $('#exportar').addEventListener('click', ()=>{
+  // Exportar backup
+  byId('exportar').addEventListener('click', ()=>{
     const data = loadAll();
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -539,7 +567,32 @@
     URL.revokeObjectURL(url);
   });
 
-  // init lista
+  // Filtros
+  byId('fSemana').addEventListener('change', renderList);
+  byId('fCliente').addEventListener('input', renderList);
+  byId('limpiarFiltros').addEventListener('click', ()=>{
+    byId('fSemana').value=''; byId('fCliente').value=''; renderList();
+  });
+
+  // Lista (acciones incluyendo Duplicar)
+  byId('lista').addEventListener('click', async (ev)=>{
+    const b = ev.target.closest('button'); if(!b) return;
+    const act = b.dataset.act, id=b.dataset.id;
+    const arr = loadAll(); const d = arr.find(x=>x.id===id);
+    if(!d) return;
+    if(act==='load'){ fillForm(d); }
+    if(act==='pdf'){ await toPDF(d,false); }
+    if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ saveAll(arr.filter(x=>x.id!==id)); renderList(); } }
+    if(act==='dup'){
+      const newId = nextID();
+      const dup = {...d, id:newId, ts:Date.now()};
+      // No guardo automáticamente; la idea es que edites antes de guardar
+      fillForm(dup);
+      alert('Copia lista para editar: ' + newId);
+    }
+  });
+
+  // init
   renderList();
 })();
 </script>
