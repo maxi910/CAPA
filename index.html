@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CAPA · ACONFEX</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121821; --ink:#e8eff6; --muted:#9bb0c5;
+      --accent:#4da3ff; --ok:#3bd16f; --warn:#ffcc00; --bad:#ff5d5d;
+      --line:#1d2633;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:var(--bg); color:var(--ink);
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
+    header{padding:18px 16px; border-bottom:1px solid var(--line);
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+    .brand{font-weight:700; letter-spacing:.4px}
+    .wrap{max-width:980px; margin:24px auto; padding:0 16px}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:18px;
+      padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .grid{display:grid; gap:12px}
+    @media(min-width:760px){ .grid2{grid-template-columns:1fr 1fr} }
+    @media(min-width:960px){ .grid3{grid-template-columns:repeat(3,1fr)} }
+    label{font-size:12px; color:var(--muted); letter-spacing:.2px}
+    input[type="text"], input[type="date"], select, textarea{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line);
+      background:#0f1520; color:var(--ink); outline:none;
+    }
+    input[readonly]{opacity:.85}
+    textarea{min-height:84px; resize:vertical}
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+      background:#0f1520; border:1px solid var(--line); user-select:none}
+    .pill input{accent-color:var(--accent)}
+    .hint{color:var(--muted); font-size:12px}
+    .bar{height:1px; background:var(--line); margin:6px 0 12px}
+    .btn{padding:10px 14px; border-radius:12px; border:1px solid var(--line);
+      background:#0f1520; color:var(--ink); cursor:pointer; font-weight:600}
+    .btn.primary{background:var(--accent); color:#08121f; border-color:#2b7dd9}
+    .btn.ghost{background:transparent}
+    .tag{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+      background:#0f1520; border:1px solid var(--line); color:var(--muted); font-size:12px}
+    .semaforo{display:flex; gap:8px; flex-wrap:wrap}
+    .dot{width:12px; height:12px; border-radius:999px; display:inline-block}
+    .dot.red{background:var(--bad)} .dot.yellow{background:var(--warn)} .dot.green{background:var(--ok)}
+    .list{display:grid; gap:8px; margin-top:10px}
+    .item{display:flex; justify-content:space-between; align-items:center; gap:10px;
+      padding:10px; background:#0f1520; border:1px solid var(--line); border-radius:12px}
+    .item small{color:var(--muted)}
+    #printCard{background:#fff; color:#000; padding:18px; width:800px; max-width:100%;
+      border:1px solid #ddd; border-radius:8px; font-family:Helvetica,Arial,sans-serif}
+    #printCard h2{margin:0 0 6px 0; font-size:18px}
+    #printCard .rowp{margin:6px 0} #printCard .hr{height:1px; background:#ddd; margin:8px 0}
+    #printModal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+      align-items:center; justify-content:center; padding:16px; z-index:10}
+    #printWrap{background:#0b0f14; padding:16px; border-radius:12px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">ACONFEX · CAPA</div>
+  <span class="tag">MSP-Lite</span>
+  <span class="tag">PDF listo</span>
+  <span class="tag" id="verTag"></span>
+</header>
+
+<div class="wrap grid">
+  <section class="card grid">
+    <div class="grid grid3">
+      <div>
+        <label>ID (auto)</label>
+        <input id="id" type="text" readonly/>
+      </div>
+      <div>
+        <label>Semana</label>
+        <select id="semana"></select>
+      </div>
+      <div>
+        <label>CNTR</label>
+        <input id="cntr" type="text" placeholder="MSKU…"/>
+      </div>
+    </div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Cliente</label>
+        <input id="cliente" type="text" placeholder="Cliente"/>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select id="estado">
+          <option value="Abierta">Abierta</option>
+          <option value="En curso">En curso</option>
+          <option value="Cerrada">Cerrada</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid3">
+      <div>
+        <label>Semáforo</label>
+        <div class="semaforo row" id="semManual">
+          <label class="pill"><input type="radio" name="sem" value="Rojo"/> <span class="dot red"></span>Rojo</label>
+          <label class="pill"><input type="radio" name="sem" value="Amarillo"/> <span class="dot yellow"></span>Amarillo</label>
+          <label class="pill"><input type="radio" name="sem" value="Verde"/> <span class="dot green"></span>Verde</label>
+        </div>
+      </div>
+      <div>
+        <label>Modo</label>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="autoSem"/> Semáforo automático</label>
+        </div>
+        <div class="hint">Regla: peor entre (urgencia por hito) y (gravedad de la matriz).</div>
+      </div>
+      <div>
+        <label>Gravedad (matriz)</label>
+        <select id="gravedad">
+          <option value="Menor">Menor</option>
+          <option value="Mayor">Mayor</option>
+          <option value="Crítica">Crítica</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label>Criterio del semáforo (1 línea)</label>
+      <input id="criterio" type="text" placeholder="Por qué el color (ej.: H-24 + error BL)"/>
+    </div>
+
+    <div class="bar"></div>
+
+    <div>
+      <label>¿Qué pasó? (1 línea)</label>
+      <input id="quePaso" type="text" placeholder="Ej: BL draft con consignatario erróneo"/>
+    </div>
+
+    <div class="grid grid2">
+      <div>
+        <label>¿CUÁNDO se detectó?</label>
+        <select id="cuando">
+          <option value="">— Seleccionar —</option>
+          <option>H-72 a Gate-in</option>
+          <option>H-48 a Gate-in</option>
+          <option>H-24 a Gate-in</option>
+          <option>Gate-in / CY cutoff</option>
+          <option>En terminal (espera a nave)</option>
+          <option>ETD (on board)</option>
+          <option>Post-ETD</option>
+          <option>Arribo</option>
+        </select>
+      </div>
+      <div>
+        <label>¿Quién lo detectó?</label>
+        <select id="quien">
+          <option>Max</option>
+          <option>Miguel</option>
+          <option>Cliente</option>
+          <option>Naviera</option>
+          <option>Planta</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label>¿DÓNDE se detectó? (marca 1 o 2)</label>
+      <div class="row">
+        <label class="pill"><input type="checkbox" class="donde" value="Campo/Cosecha"/> Campo/Cosecha</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Transporte interno"/> Transporte interno</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Planta/Packing"/> Planta/Packing</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Cámara/Pre-frío"/> Cámara/Pre-frío</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Documental/Oficina"/> Documental/Oficina</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Naviera/Forwarder"/> Naviera/Forwarder</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Agencia Aduana"/> Agencia Aduana</label>
+        <label class="pill"><input type="checkbox" class="donde" value="SAG/Inspección"/> SAG/Inspección</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Seguro/Aseguradora"/> Seguro/Aseguradora</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Cliente/Destino"/> Cliente/Destino</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Reefer/Equipo"/> Reefer/Equipo</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Financiero/Contabilidad"/> Financiero/Contabilidad</label>
+        <label class="pill"><input type="checkbox" class="donde" value="Otro"/> Otro</label>
+      </div>
+    </div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Causa breve</label>
+        <input id="causa" type="text" placeholder="Ej: Plantilla vieja / Pre-frío insuficiente"/>
+      </div>
+      <div>
+        <label>Evidencia (breve o enlace)</label>
+        <input id="evidencia" type="text" placeholder="BL_v2.pdf / foto sello / logger…"/>
+      </div>
+    </div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Acción de CONTENCIÓN (hoy)</label>
+        <textarea id="contencion" placeholder="Qué harás ahora para frenar el impacto"></textarea>
+        <div class="row">
+          <label class="pill"><input type="radio" name="respC" value="Max" checked/> Max</label>
+          <label class="pill"><input type="radio" name="respC" value="Miguel"/> Miguel</label>
+          <label class="pill"><input type="radio" name="respC" value="Otro"/> Otro</label>
+          <input id="respC_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
+          <input id="fechaC" type="date" style="margin-left:auto"/>
+        </div>
+      </div>
+      <div>
+        <label>Acción DEFINITIVA (que no se repita)</label>
+        <textarea id="definitiva" placeholder="Cambio de proceso/checklist/validación…"></textarea>
+        <div class="row">
+          <label class="pill"><input type="radio" name="respD" value="Max" checked/> Max</label>
+          <label class="pill"><input type="radio" name="respD" value="Miguel"/> Miguel</label>
+          <label class="pill"><input type="radio" name="respD" value="Otro"/> Otro</label>
+          <input id="respD_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
+          <input id="fechaD" type="date" style="margin-left:auto"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Cierre (fecha)</label>
+        <input id="cierre" type="date"/>
+      </div>
+      <div>
+        <label>Verificación (cómo/resultado, 1 línea)</label>
+        <input id="verif" type="text" placeholder="Ej: 0 errores en 3 zarpes; logger OK"/>
+      </div>
+    </div>
+
+    <div class="actions row">
+      <button class="btn" id="guardar">Guardar CAPA</button>
+      <button class="btn primary" id="pdf">Generar PDF</button>
+      <button class="btn" id="compartir">Compartir PDF</button>
+      <button class="btn ghost" id="limpiar">Limpiar</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between; align-items:center">
+      <h3 style="margin:0">Guardadas</h3>
+      <div class="row">
+        <button class="btn ghost" id="exportar">Exportar JSON</button>
+        <button class="btn ghost" id="resetID">Reiniciar ID</button>
+      </div>
+    </div>
+    <div id="lista" class="list"></div>
+  </section>
+
+  <div id="printModal"><div id="printWrap"><div id="printCard"></div></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+(() => {
+  const APP_VERSION = '2025.11.09-01';
+  document.getElementById('verTag').textContent = 'v' + APP_VERSION;
+
+  // --- SW: sin caché estático (rompe caché al actualizar) ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js?v='+APP_VERSION)
+      .catch(()=>{/*ignore*/});
+  }
+
+  // Utilidades
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  // Semana S01..S52
+  const selSemana = $('#semana');
+  selSemana.innerHTML = '<option value="">— Seleccionar —</option>' +
+    Array.from({length:52},(_,i)=>`<option value="S${String(i+1).padStart(2,'0')}">S${String(i+1).padStart(2,'0')}</option>`).join('');
+
+  // ID auto (bloqueado)
+  function nextID(){
+    const key='capa_last_id';
+    const n = (parseInt(localStorage.getItem(key)||'0',10) || 0) + 1;
+    localStorage.setItem(key, String(n));
+    return 'CAPA-' + String(n).padStart(3,'0');
+  }
+  function ensureID(){
+    const v = $('#id').value.trim();
+    if(!v){ $('#id').value = nextID(); }
+  }
+  ensureID();
+
+  // Semáforo automático
+  const urgencyColor = (cuando) => {
+    switch (cuando) {
+      case 'H-24 a Gate-in':
+      case 'Gate-in / CY cutoff':
+      case 'ETD (on board)':
+        return 'Rojo';
+      case 'H-48 a Gate-in':
+      case 'En terminal (espera a nave)':
+        return 'Amarillo';
+      case 'H-72 a Gate-in':
+      case 'Post-ETD':
+      case 'Arribo':
+      default:
+        return 'Verde';
+    }
+  };
+  const gravityColor = (g) => ({'Menor':'Verde','Mayor':'Amarillo','Crítica':'Rojo'}[g] || 'Verde');
+  const colorRank = c => ({'Verde':1,'Amarillo':2,'Rojo':3}[c]||1);
+  function worstColor(a,b){ return colorRank(a) >= colorRank(b) ? a : b; }
+
+  function getManualSem(){ const r = $$('input[name="sem"]:checked')[0]; return r? r.value : ''; }
+  function setManualSem(color){
+    $$('input[name="sem"]').forEach(r => r.checked = (r.value===color));
+  }
+
+  function getDonde(){
+    const v = $$('.donde:checked').map(x=>x.value);
+    return v.slice(0,2).join(', ');
+  }
+
+  function getResp(name, otherId){
+    const r = $$(`input[name="${name}"]:checked`)[0];
+    if(!r) return '';
+    if(r.value==='Otro'){
+      const v = $(otherId).value.trim();
+      return v? v : 'Otro';
+    }
+    return r.value;
+  }
+
+  function readForm(){
+    ensureID();
+    return {
+      id: $('#id').value.trim(),
+      semana: $('#semana').value,
+      cntr: $('#cntr').value.trim(),
+      cliente: $('#cliente').value.trim(),
+      estado: $('#estado').value,
+      semaforo: getManualSem(),
+      criterio: $('#criterio').value.trim(),
+      quePaso: $('#quePaso').value.trim(),
+      cuando: $('#cuando').value,
+      gravedad: $('#gravedad').value,
+      donde: getDonde(),
+      quien: $('#quien').value,
+      causa: $('#causa').value.trim(),
+      evidencia: $('#evidencia').value.trim(),
+      contencion: $('#contencion').value.trim(),
+      respC: getResp('respC','#respC_otro'),
+      fechaC: $('#fechaC').value,
+      definitiva: $('#definitiva').value.trim(),
+      respD: getResp('respD','#respD_otro'),
+      fechaD: $('#fechaD').value,
+      cierre: $('#cierre').value,
+      verif: $('#verif').value.trim(),
+      ts: Date.now()
+    };
+  }
+
+  function applyAutoSemIfNeeded(){
+    const auto = $('#autoSem').checked;
+    if(!auto) return;
+    const cUrg = urgencyColor($('#cuando').value);
+    const cGrv = gravityColor($('#gravedad').value);
+    setManualSem(worstColor(cUrg, cGrv));
+  }
+
+  // Validaciones mínimas
+  function validateMinimal(d){
+    const missing=[];
+    if(!d.semana) missing.push('Semana');
+    if(!d.quePaso) missing.push('¿Qué pasó?');
+    if(!d.cuando) missing.push('¿Cuándo?');
+    if(!d.criterio) missing.push('Criterio del semáforo');
+    if(!d.semaforo) missing.push('Semáforo');
+    if(missing.length){ alert('Completa: ' + missing.join(', ')); return false; }
+    return true;
+  }
+
+  // Persistencia
+  function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
+  function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
+  function upsert(d){
+    const arr = loadAll();
+    const i = arr.findIndex(x=>x.id===d.id);
+    if(i>=0) arr[i]=d; else arr.unshift(d);
+    saveAll(arr); renderList();
+  }
+
+  function renderList(){
+    const arr = loadAll();
+    const wrap = $('#lista'); wrap.innerHTML = '';
+    if(!arr.length){ wrap.innerHTML = '<div class="hint">Sin registros todavía.</div>'; return; }
+    arr.forEach(d=>{
+      const dot = d.semaforo==='Rojo'?'red':(d.semaforo==='Amarillo'?'yellow':'green');
+      const el = document.createElement('div');
+      el.className='item';
+      el.innerHTML = `
+        <div>
+          <strong>${d.id}</strong> — <small>${d.semana||''}</small> — ${d.quePaso || '(sin descripción)'}<br/>
+          <small>${d.cntr?('CNTR '+d.cntr+' · '):''}${d.cliente||''} · ${d.cuando||''} · ${d.donde||''}</small>
+        </div>
+        <div class="row">
+          <span class="dot ${dot}"></span>
+          <button class="btn" data-id="${d.id}" data-act="pdf">PDF</button>
+          <button class="btn" data-id="${d.id}" data-act="load">Abrir</button>
+          <button class="btn ghost" data-id="${d.id}" data-act="del">Borrar</button>
+        </div>`;
+      wrap.appendChild(el);
+    });
+  }
+
+  function fillForm(d){
+    $('#id').value=d.id; $('#semana').value=d.semana; $('#cntr').value=d.cntr;
+    $('#cliente').value=d.cliente; $('#estado').value=d.estado;
+    $('#criterio').value=d.criterio||'';
+    $('#quePaso').value=d.quePaso; $('#cuando').value=d.cuando; $('#gravedad').value=d.gravedad||'Menor';
+    $$('.donde').forEach(x=>x.checked = (d.donde||'').split(', ').includes(x.value));
+    $('#quien').value=d.quien; $('#causa').value=d.causa; $('#evidencia').value=d.evidencia;
+    $('#contencion').value=d.contencion; $('#fechaC').value=d.fechaC;
+    $('#definitiva').value=d.definitiva; $('#fechaD').value=d.fechaD;
+    $('#cierre').value=d.cierre; $('#verif').value=d.verif;
+    $$('input[name="sem"]').forEach(x=>x.checked = (x.value===d.semaforo));
+  }
+
+  // PDF
+  function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function fmtDate(s){ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(); }catch(e){return s;} }
+  function badge(color,text){ const map={Rojo:'#ff5d5d',Amarillo:'#ffcc00',Verde:'#3bd16f'}; const c=map[color]||'#999'; return `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${c};display:inline-block"></span>${text||color}</span>`; }
+
+  function buildPrintCard(d){
+    return `
+      <div style="font-size:12px; line-height:1.35">
+        <h2>Tarjeta CAPA — ACONFEX</h2>
+        <div class="rowp"><strong>${d.id}</strong> &nbsp; Semana: <strong>${d.semana||''}</strong> &nbsp; CNTR: <strong>${d.cntr||''}</strong> &nbsp; Cliente: <strong>${d.cliente||''}</strong></div>
+        <div class="rowp"><strong>Semáforo:</strong> ${badge(d.semaforo,d.semaforo)} &nbsp; <em>${escapeHTML(d.criterio||'')}</em></div>
+        <div class="rowp"><strong>¿Qué pasó?</strong> ${escapeHTML(d.quePaso||'')}</div>
+        <div class="rowp"><strong>¿CUÁNDO?</strong> ${d.cuando||''} &nbsp; &nbsp; <strong>¿DÓNDE?</strong> ${d.donde||''} &nbsp; &nbsp; <strong>¿QUIÉN?</strong> ${d.quien||''}</div>
+        <div class="rowp"><strong>Gravedad (matriz):</strong> ${escapeHTML(d.gravedad||'')}</div>
+        <div class="hr"></div>
+        <div class="rowp"><strong>Causa breve:</strong> ${escapeHTML(d.causa||'')}</div>
+        <div class="rowp"><strong>Contención (hoy):</strong> ${escapeHTML(d.contencion||'')}</div>
+        <div class="rowp"><strong>Responsable:</strong> ${d.respC||''} &nbsp; <strong>Fecha:</strong> ${fmtDate(d.fechaC)||''}</div>
+        <div class="rowp"><strong>Acción definitiva:</strong> ${escapeHTML(d.definitiva||'')}</div>
+        <div class="rowp"><strong>Responsable:</strong> ${d.respD||''} &nbsp; <strong>Fecha:</strong> ${fmtDate(d.fechaD)||''}</div>
+        <div class="hr"></div>
+        <div class="rowp"><strong>Evidencia:</strong> ${escapeHTML(d.evidencia||'')}</div>
+        <div class="rowp"><strong>Estado:</strong> ${d.estado||''} &nbsp; &nbsp; <strong>Cierre:</strong> ${fmtDate(d.cierre)||''}</div>
+        <div class="rowp"><strong>Verificación:</strong> ${escapeHTML(d.verif||'')}</div>
+        <div class="hr"></div>
+        <div class="rowp" style="color:#666">Regla del semáforo: peor entre (urgencia por hito) y (gravedad de la matriz).</div>
+      </div>
+    `;
+  }
+
+  async function toPDF(d, share=false){
+    const modal = $('#printModal'), card = $('#printCard');
+    card.innerHTML = buildPrintCard(d);
+    modal.style.display='flex';
+    await new Promise(r=>setTimeout(r,60));
+    const canvas = await html2canvas(card, {scale:2, background:'#FFFFFF', windowWidth:900});
+    modal.style.display='none';
+    const img = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'pt', format:'a4' });
+    const pageW = pdf.internal.pageSize.getWidth(), margin = 28;
+    const w = pageW - margin*2, h = canvas.height * (w/canvas.width);
+    pdf.addImage(img, 'PNG', margin, margin, w, h);
+    const fname = (d.id||'CAPA') + '.pdf';
+    if(share && navigator.canShare){
+      const blob = pdf.output('blob');
+      const file = new File([blob], fname, {type:'application/pdf'});
+      try{ await navigator.share({ files:[file], title:d.id, text:'Tarjeta CAPA'}); }catch(e){}
+      return;
+    }
+    pdf.save(fname);
+  }
+
+  // Eventos
+  $('#autoSem').addEventListener('change', ()=>{
+    const dis = $('#autoSem').checked;
+    $('#semManual').style.pointerEvents = dis ? 'none' : 'auto';
+    $('#semManual').style.opacity = dis ? .6 : 1;
+    applyAutoSemIfNeeded();
+  });
+  $('#cuando').addEventListener('change', applyAutoSemIfNeeded);
+  $('#gravedad').addEventListener('change', applyAutoSemIfNeeded);
+
+  $('#guardar').addEventListener('click', ()=>{
+    const d = readForm();
+    applyAutoSemIfNeeded();
+    d.semaforo = getManualSem(); // asegurar valor final
+    if(!validateMinimal(d)) return;
+    upsert(d);
+    alert('CAPA guardada: ' + d.id);
+  });
+
+  $('#pdf').addEventListener('click', async ()=>{
+    const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
+    if(!validateMinimal(d)) return; await toPDF(d,false);
+  });
+
+  $('#compartir').addEventListener('click', async ()=>{
+    const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
+    if(!validateMinimal(d)) return; await toPDF(d,true);
+  });
+
+  $('#limpiar').addEventListener('click', ()=>{
+    const keepID = $('#id').value; // mantener ID actual
+    document.querySelector('form')?.reset();
+    ['cntr','cliente','criterio','quePaso','causa','evidencia','contencion','definitiva','respC_otro','respD_otro','verif'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+    ['semana','cuando','quien','estado','gravedad'].forEach(id=>$('#'+id).value='');
+    ['fechaC','fechaD','cierre'].forEach(id=>$('#'+id).value='');
+    $$('input[name="sem"]').forEach(x=>x.checked=false);
+    $$('.donde').forEach(x=>x.checked=false);
+    $('#autoSem').checked=false; $('#semManual').style.pointerEvents='auto'; $('#semManual').style.opacity=1;
+    $('#id').value = keepID || nextID();
+  });
+
+  $('#resetID').addEventListener('click', ()=>{
+    if(confirm('¿Reiniciar contador de ID?')){ localStorage.removeItem('capa_last_id'); $('#id').value=''; ensureID(); }
+  });
+
+  $('#lista').addEventListener('click', async (ev)=>{
+    const b = ev.target.closest('button'); if(!b) return;
+    const act = b.dataset.act, id=b.dataset.id;
+    const arr = loadAll(); const d = arr.find(x=>x.id===id);
+    if(!d) return;
+    if(act==='load'){ fillForm(d); window.scrollTo({top:0, behavior:'smooth'}); }
+    if(act==='pdf'){ await toPDF(d,false); }
+    if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ localStorage.setItem('capa_entries', JSON.stringify(arr.filter(x=>x.id!==id))); renderList(); } }
+  });
+
+  $('#exportar').addEventListener('click', ()=>{
+    const data = loadAll();
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='ACONFEX_CAPA_backup.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // init lista
+  renderList();
+})();
+</script>
+</body>
+</html>
