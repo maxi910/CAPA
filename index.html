@@ -130,7 +130,7 @@
             <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
-            <label>Semana (S00–S52) <button type="button" class="help" title="Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</button></label>
+            <label>Semana (S00–S52)</label>
             <select id="semanaSel"></select>
           </div>
         </div>
@@ -254,10 +254,8 @@
         <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
         <div class="uploader" id="dropZone">
           <p>Arrastra archivos aquí o 
-            <!-- IMPORTANTE: esta etiqueta NO tiene clase .help para no interceptar el click en iOS -->
             <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
           </p>
-          <!-- En iOS el input debe existir y no estar display:none para permitir apertura confiable -->
           <input id="evidInput" type="file" accept="application/pdf,image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>
         </div>
         <div class="evidence-list" id="evidList"></div>
@@ -340,6 +338,18 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <script>
+    // ========= Anti-duplicado: elimina copias si pegaste el archivo dos veces =========
+    (function antiDup(){
+      window.addEventListener('DOMContentLoaded', ()=>{
+        const wraps = document.querySelectorAll('.wrap');
+        for(let i=1;i<wraps.length;i++) wraps[i].remove();
+        ['formCard','listCard'].forEach(id=>{
+          const nodes = document.querySelectorAll('#'+id);
+          for(let i=1;i<nodes.length;i++) nodes[i].remove();
+        });
+      });
+    })();
+
     // ========= Utilidades =========
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -359,18 +369,6 @@
     }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    // Semana 0–52 (0-based) desde fecha (ISO week - 1)
-    function week0to52(dateStr){
-      if(!dateStr) return 0;
-      const d = new Date(dateStr);
-      const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNr = (target.getUTCDay() + 6) % 7; // lunes=0
-      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves ISO
-      const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
-      const week = 1 + Math.round(((target - firstThursday)/86400000 - 3) / 7);
-      return Math.max(0, Math.min(52, week - 1));
-    }
 
     function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
     function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
@@ -429,7 +427,7 @@
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      setWeekSelect(0);
+      setWeekSelect(0); // ahora SEMANA es manual, no autocalculada
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
@@ -459,7 +457,7 @@
       $('#capaEstado').value = obj.estado||'Abierta';
       $('#fechaDeteccion').value = obj.fechaDeteccion||'';
       $('#fechaCierre').value = obj.fechaCierre||'';
-      setWeekSelect(typeof obj.semana==='number'? obj.semana : week0to52(obj.fechaDeteccion));
+      setWeekSelect(typeof obj.semana==='number'? obj.semana : 0); // sin autocalcular
       $('#donde').value = obj.donde||'Campo';
       $('#tercero').value = obj.tercero||'';
       $('#gravedad').value = obj.gravedad||'Baja';
@@ -518,15 +516,9 @@
       return obj;
     }
 
-    // Eventos de riesgo
+    // Eventos de riesgo manual
     $('#gravedad').addEventListener('change', updateRiskPill);
     $('#probabilidad').addEventListener('change', updateRiskPill);
-
-    // Autocalcular semana al cambiar fecha
-    $('#fechaDeteccion').addEventListener('change', ()=>{
-      const w = week0to52($('#fechaDeteccion').value);
-      setWeekSelect(w);
-    });
 
     // ========= Tooltip accesible =========
     let openTip = null;
@@ -647,7 +639,6 @@
     function previewBlob(blob, title='Vista previa'){
       const url = URL.createObjectURL(blob);
       if(blob.type==='application/pdf' && isIOS){
-        // iOS Safari no muestra blob PDF en iframe/embed: abrir nueva pestaña
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
         return;
@@ -775,7 +766,6 @@
       const obj = collectForm();
       const {blob, name} = await exportPDF(obj, {returnBlob:true});
       if(isIOS){
-        // iOS: abrir en pestaña nueva para garantizar visualización
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
@@ -839,9 +829,7 @@
 
       if(y>700){ pdf.addPage(); y = margin; }
       pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
-Plan de verificación: ${obj.planVerif||''}
-Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}\nPlan de verificación: ${obj.planVerif||''}\nFecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
@@ -856,7 +844,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
       }
 
-      // grid 2xN de imágenes
       const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
       for(const imgBlob of imgs){
         const dataUrl = await blobToDataURL(imgBlob);
@@ -909,8 +896,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     setupHelpTips();
   </script>
 </body>
-</html>
-<!DOCTYPE html>
+</html><!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -1042,7 +1028,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
             <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
-            <label>Semana (S00–S52) <button type="button" class="help" title="Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</button></label>
+            <label>Semana (S00–S52)</label>
             <select id="semanaSel"></select>
           </div>
         </div>
@@ -1166,10 +1152,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
         <div class="uploader" id="dropZone">
           <p>Arrastra archivos aquí o 
-            <!-- IMPORTANTE: esta etiqueta NO tiene clase .help para no interceptar el click en iOS -->
             <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
           </p>
-          <!-- En iOS el input debe existir y no estar display:none para permitir apertura confiable -->
           <input id="evidInput" type="file" accept="application/pdf,image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>
         </div>
         <div class="evidence-list" id="evidList"></div>
@@ -1252,6 +1236,18 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <script>
+    // ========= Anti-duplicado: elimina copias si pegaste el archivo dos veces =========
+    (function antiDup(){
+      window.addEventListener('DOMContentLoaded', ()=>{
+        const wraps = document.querySelectorAll('.wrap');
+        for(let i=1;i<wraps.length;i++) wraps[i].remove();
+        ['formCard','listCard'].forEach(id=>{
+          const nodes = document.querySelectorAll('#'+id);
+          for(let i=1;i<nodes.length;i++) nodes[i].remove();
+        });
+      });
+    })();
+
     // ========= Utilidades =========
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -1271,18 +1267,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    // Semana 0–52 (0-based) desde fecha (ISO week - 1)
-    function week0to52(dateStr){
-      if(!dateStr) return 0;
-      const d = new Date(dateStr);
-      const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNr = (target.getUTCDay() + 6) % 7; // lunes=0
-      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves ISO
-      const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
-      const week = 1 + Math.round(((target - firstThursday)/86400000 - 3) / 7);
-      return Math.max(0, Math.min(52, week - 1));
-    }
 
     function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
     function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
@@ -1341,7 +1325,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      setWeekSelect(0);
+      setWeekSelect(0); // ahora SEMANA es manual, no autocalculada
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
@@ -1371,7 +1355,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       $('#capaEstado').value = obj.estado||'Abierta';
       $('#fechaDeteccion').value = obj.fechaDeteccion||'';
       $('#fechaCierre').value = obj.fechaCierre||'';
-      setWeekSelect(typeof obj.semana==='number'? obj.semana : week0to52(obj.fechaDeteccion));
+      setWeekSelect(typeof obj.semana==='number'? obj.semana : 0); // sin autocalcular
       $('#donde').value = obj.donde||'Campo';
       $('#tercero').value = obj.tercero||'';
       $('#gravedad').value = obj.gravedad||'Baja';
@@ -1430,15 +1414,9 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       return obj;
     }
 
-    // Eventos de riesgo
+    // Eventos de riesgo manual
     $('#gravedad').addEventListener('change', updateRiskPill);
     $('#probabilidad').addEventListener('change', updateRiskPill);
-
-    // Autocalcular semana al cambiar fecha
-    $('#fechaDeteccion').addEventListener('change', ()=>{
-      const w = week0to52($('#fechaDeteccion').value);
-      setWeekSelect(w);
-    });
 
     // ========= Tooltip accesible =========
     let openTip = null;
@@ -1559,7 +1537,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     function previewBlob(blob, title='Vista previa'){
       const url = URL.createObjectURL(blob);
       if(blob.type==='application/pdf' && isIOS){
-        // iOS Safari no muestra blob PDF en iframe/embed: abrir nueva pestaña
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
         return;
@@ -1687,7 +1664,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       const obj = collectForm();
       const {blob, name} = await exportPDF(obj, {returnBlob:true});
       if(isIOS){
-        // iOS: abrir en pestaña nueva para garantizar visualización
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
@@ -1751,9 +1727,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       if(y>700){ pdf.addPage(); y = margin; }
       pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
-Plan de verificación: ${obj.planVerif||''}
-Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}\nPlan de verificación: ${obj.planVerif||''}\nFecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
@@ -1768,7 +1742,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
       }
 
-      // grid 2xN de imágenes
       const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
       for(const imgBlob of imgs){
         const dataUrl = await blobToDataURL(imgBlob);
