@@ -60,6 +60,12 @@
     /* Filtros */
     .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0 0}
     .counter{color:var(--muted); font-size:12px}
+
+    /* Modal genérico */
+    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+      align-items:center; justify-content:center; padding:16px; z-index:20}
+    .modal-card{background:var(--card); border:1px solid var(--line); border-radius:16px;
+      padding:16px; max-width:720px; width:100%}
   </style>
 </head>
 <body>
@@ -68,6 +74,7 @@
   <span class="tag">MSP-Lite</span>
   <span class="tag">PDF listo</span>
   <span class="tag" id="verTag"></span>
+  <button class="btn ghost" id="openRules">Reglas globales</button>
 </header>
 
 <div class="wrap grid">
@@ -188,6 +195,14 @@
       </div>
     </div>
 
+    <!-- Prevenciones globales aplicables al hito seleccionado -->
+    <div id="prevBlock" style="display:none">
+      <div class="bar"></div>
+      <label>Prevenciones globales para <span id="prevHito"></span></label>
+      <div id="prevChecklist" class="grid"></div>
+      <div class="hint">Marca lo que efectivamente cumpliste en este caso (quedará en el PDF).</div>
+    </div>
+
     <div class="grid grid2">
       <div>
         <label>Causa breve</label>
@@ -269,7 +284,71 @@
     <div id="lista" class="list"></div>
   </section>
 
+  <!-- Modal impresión -->
   <div id="printModal"><div id="printWrap"><div id="printCard"></div></div></div>
+
+  <!-- Modal Reglas Globales -->
+  <div id="rulesModal" class="modal">
+    <div class="modal-card">
+      <div class="row" style="justify-content:space-between; align-items:center">
+        <h3 style="margin:0">Prevenciones globales</h3>
+        <div class="row">
+          <button class="btn" id="newRule">Nueva regla</button>
+          <button class="btn ghost" id="closeRules">Cerrar</button>
+        </div>
+      </div>
+      <div id="rulesList" class="list" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- Modal Crear/Editar Regla -->
+  <div id="editRuleModal" class="modal">
+    <div class="modal-card">
+      <h3 id="ruleTitle" style="margin:0 0 8px 0">Nueva regla</h3>
+      <div class="grid grid3">
+        <div>
+          <label>Hito</label>
+          <select id="ruleHito">
+            <option>H-72 a Gate-in</option>
+            <option>H-48 a Gate-in</option>
+            <option>H-24 a Gate-in</option>
+            <option>Gate-in / CY cutoff</option>
+            <option>En terminal (espera a nave)</option>
+            <option>ETD (on board)</option>
+            <option>Post-ETD</option>
+            <option>Arribo</option>
+            <option>Todas</option>
+          </select>
+        </div>
+        <div>
+          <label>Dueño</label>
+          <select id="ruleOwner">
+            <option>Max</option>
+            <option>Miguel</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label>Activa</label>
+          <div class="row"><label class="pill"><input type="checkbox" id="ruleActive" checked/> Regla activa</label></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label>Regla (1 línea, verificable)</label>
+          <input id="ruleTexto" type="text" placeholder="No avanzar a [HITO] si no está [CONDICIÓN] con evidencia [X]"/>
+        </div>
+        <div>
+          <label>Evidencia requerida (1 línea)</label>
+          <input id="ruleEvid" type="text" placeholder="PDF BL draft + FITO en carpeta / foto logger / etc."/>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="saveRule">Guardar</button>
+        <button class="btn ghost" id="cancelRule">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- libs PDF -->
@@ -277,20 +356,18 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 (() => {
-  const APP_VERSION = '2025.11.09-02';
+  const APP_VERSION = '2025.11.09-03';
   document.getElementById('verTag').textContent = 'v' + APP_VERSION;
 
-  // --- Service Worker (rompe caché) ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js?v='+APP_VERSION).catch(()=>{});
   }
 
-  // Utils
   const $ = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const byId = id => document.getElementById(id);
 
-  // Semana opciones (form y filtros)
+  // ---------------- Semanas ----------------
   function fillWeeks(selectEl, includeAll=false){
     const base = includeAll ? '<option value="">Todas</option>' : '<option value="">— Seleccionar —</option>';
     selectEl.innerHTML = base + Array.from({length:52},(_,i)=>{
@@ -301,7 +378,7 @@
   fillWeeks(byId('semana'), false);
   fillWeeks(byId('fSemana'), true);
 
-  // ID auto (bloqueado)
+  // ---------------- IDs ----------------
   function nextID(){
     const key='capa_last_id';
     const n = (parseInt(localStorage.getItem(key)||'0',10) || 0) + 1;
@@ -311,7 +388,46 @@
   function ensureID(){ if(!byId('id').value.trim()) byId('id').value = nextID(); }
   ensureID();
 
-  // Semáforo automático
+  // ---------------- Reglas globales (prevenciones) ----------------
+  function loadRules(){ try{ return JSON.parse(localStorage.getItem('capa_rules')||'[]'); }catch{ return []; } }
+  function saveRules(arr){ localStorage.setItem('capa_rules', JSON.stringify(arr)); }
+  function nextRuleID(){
+    const key='capa_last_rule_id';
+    const n = (parseInt(localStorage.getItem(key)||'0',10) || 0) + 1;
+    localStorage.setItem(key, String(n));
+    return 'R' + String(n).padStart(3,'0');
+  }
+
+  function ruleMatchesHito(ruleHito, hito){
+    return ruleHito === 'Todas' || ruleHito === hito;
+  }
+
+  function renderPrevChecklist(){
+    const hito = byId('cuando').value;
+    const block = byId('prevBlock');
+    const lbl = byId('prevHito');
+    const wrap = byId('prevChecklist');
+    const rules = loadRules().filter(r => r.active && hito && ruleMatchesHito(r.hito, hito));
+    if(!hito || rules.length===0){
+      block.style.display='none';
+      wrap.innerHTML='';
+      return;
+    }
+    block.style.display='block';
+    lbl.textContent = hito;
+    // preservar selección previa
+    const currentChecked = new Set($$('.prev_chk:checked').map(x=>x.value));
+    wrap.innerHTML = rules.map(r => `
+      <label class="pill" title="${escapeHTML(r.evidencia||'')}">
+        <input type="checkbox" class="prev_chk" value="${r.rid}" ${currentChecked.has(r.rid)?'checked':''}/>
+        ${escapeHTML(r.texto || '(Regla sin texto)')}
+      </label>
+    `).join('');
+  }
+
+  byId('cuando').addEventListener('change', ()=>{ applyAutoSemIfNeeded(); renderPrevChecklist(); });
+
+  // ---------------- Semáforo automático ----------------
   const urgencyColor = (cuando) => {
     switch (cuando) {
       case 'H-24 a Gate-in':
@@ -331,9 +447,25 @@
   const gravityColor = (g) => ({'Menor':'Verde','Mayor':'Amarillo','Crítica':'Rojo'}[g] || 'Verde');
   const colorRank = c => ({'Verde':1,'Amarillo':2,'Rojo':3}[c]||1);
   const worstColor = (a,b) => (colorRank(a) >= colorRank(b) ? a : b);
-
   function getManualSem(){ const r = $$('input[name="sem"]:checked')[0]; return r? r.value : ''; }
   function setManualSem(color){ $$('input[name="sem"]').forEach(r => r.checked = (r.value===color)); }
+
+  function applyAutoSemIfNeeded(){
+    const auto = byId('autoSem').checked;
+    if(!auto) return;
+    const cUrg = urgencyColor(byId('cuando').value);
+    const cGrv = gravityColor(byId('gravedad').value);
+    setManualSem(worstColor(cUrg, cGrv));
+  }
+  byId('autoSem').addEventListener('change', ()=>{
+    const dis = byId('autoSem').checked;
+    byId('semManual').style.pointerEvents = dis ? 'none' : 'auto';
+    byId('semManual').style.opacity = dis ? .6 : 1;
+    applyAutoSemIfNeeded();
+  });
+  byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
+
+  // ---------------- Form helpers ----------------
   function getDonde(){
     const v = $$('.donde:checked').map(x=>x.value);
     return v.slice(0,2).join(', ');
@@ -346,6 +478,9 @@
       return v? v : 'Otro';
     }
     return r.value;
+  }
+  function getPrevAplicadas(){
+    return $$('.prev_chk:checked').map(x=>x.value);
   }
 
   function readForm(){
@@ -373,16 +508,9 @@
       fechaD: byId('fechaD').value,
       cierre: byId('cierre').value,
       verif: byId('verif').value.trim(),
+      prev_aplicadas: getPrevAplicadas(),
       ts: Date.now()
     };
-  }
-
-  function applyAutoSemIfNeeded(){
-    const auto = byId('autoSem').checked;
-    if(!auto) return;
-    const cUrg = urgencyColor(byId('cuando').value);
-    const cGrv = gravityColor(byId('gravedad').value);
-    setManualSem(worstColor(cUrg, cGrv));
   }
 
   function validateMinimal(d){
@@ -396,10 +524,9 @@
     return true;
   }
 
-  // Persistencia
-  const loadAll = () => { try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } };
-  const saveAll = (arr) => localStorage.setItem('capa_entries', JSON.stringify(arr));
-
+  // ---------------- Persistencia CAPA ----------------
+  function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
+  function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
   function upsert(d){
     const arr = loadAll();
     const i = arr.findIndex(x=>x.id===d.id);
@@ -407,7 +534,7 @@
     saveAll(arr); renderList();
   }
 
-  // Filtros
+  // ---------------- Lista + filtros ----------------
   function getFilters(){
     return {
       semana: byId('fSemana').value,
@@ -443,6 +570,7 @@
           <button class="btn" data-id="${d.id}" data-act="pdf">PDF</button>
           <button class="btn" data-id="${d.id}" data-act="load">Abrir</button>
           <button class="btn" data-id="${d.id}" data-act="dup">Duplicar</button>
+          <button class="btn" data-id="${d.id}" data-act="promover">Promover</button>
           <button class="btn ghost" data-id="${d.id}" data-act="del">Borrar</button>
         </div>`;
       wrap.appendChild(el);
@@ -460,15 +588,32 @@
     byId('definitiva').value=d.definitiva; byId('fechaD').value=d.fechaD;
     byId('cierre').value=d.cierre; byId('verif').value=d.verif;
     $$('input[name="sem"]').forEach(x=>x.checked = (x.value===d.semaforo));
+    // prevenciones marcadas
+    renderPrevChecklist();
+    const set = new Set(d.prev_aplicadas||[]);
+    $$('.prev_chk').forEach(cb => cb.checked = set.has(cb.value));
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  // PDF
+  // ---------------- PDF ----------------
   function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   function fmtDate(s){ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(); }catch(e){return s;} }
   function badge(color,text){ const map={Rojo:'#ff5d5d',Amarillo:'#ffcc00',Verde:'#3bd16f'}; const c=map[color]||'#999'; return `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${c};display:inline-block"></span>${text||color}</span>`; }
 
+  function mapPrevenciones(ids){
+    const rules = loadRules();
+    const pick = [];
+    ids = ids||[];
+    ids.forEach(rid => {
+      const r = rules.find(x=>x.rid===rid);
+      if(r) pick.push(r.texto);
+    });
+    return pick;
+  }
+
   function buildPrintCard(d){
+    const prev = mapPrevenciones(d.prev_aplicadas);
+    const prevHTML = prev.length ? ('<ul>' + prev.map(p=>'<li>'+escapeHTML(p)+'</li>').join('') + '</ul>') : '<em>—</em>';
     return `
       <div style="font-size:12px; line-height:1.35">
         <h2>Tarjeta CAPA — ACONFEX</h2>
@@ -477,6 +622,8 @@
         <div class="rowp"><strong>¿Qué pasó?</strong> ${escapeHTML(d.quePaso||'')}</div>
         <div class="rowp"><strong>¿CUÁNDO?</strong> ${d.cuando||''} &nbsp; &nbsp; <strong>¿DÓNDE?</strong> ${d.donde||''} &nbsp; &nbsp; <strong>¿QUIÉN?</strong> ${d.quien||''}</div>
         <div class="rowp"><strong>Gravedad (matriz):</strong> ${escapeHTML(d.gravedad||'')}</div>
+        <div class="hr"></div>
+        <div class="rowp"><strong>Prevenciones aplicadas:</strong> ${prevHTML}</div>
         <div class="hr"></div>
         <div class="rowp"><strong>Causa breve:</strong> ${escapeHTML(d.causa||'')}</div>
         <div class="rowp"><strong>Contención (hoy):</strong> ${escapeHTML(d.contencion||'')}</div>
@@ -516,17 +663,7 @@
     pdf.save(fname);
   }
 
-  // Eventos semáforo auto
-  byId('autoSem').addEventListener('change', ()=>{
-    const dis = byId('autoSem').checked;
-    byId('semManual').style.pointerEvents = dis ? 'none' : 'auto';
-    byId('semManual').style.opacity = dis ? .6 : 1;
-    applyAutoSemIfNeeded();
-  });
-  byId('cuando').addEventListener('change', applyAutoSemIfNeeded);
-  byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
-
-  // Botones form
+  // ---------------- Eventos form ----------------
   byId('guardar').addEventListener('click', ()=>{
     const d = readForm();
     applyAutoSemIfNeeded();
@@ -552,29 +689,19 @@
     $$('.donde').forEach(x=>x.checked=false);
     byId('autoSem').checked=false; byId('semManual').style.pointerEvents='auto'; byId('semManual').style.opacity=1;
     byId('id').value = keepID || nextID();
+    byId('prevChecklist').innerHTML=''; byId('prevBlock').style.display='none';
   });
-
   byId('resetID').addEventListener('click', ()=>{
     if(confirm('¿Reiniciar contador de ID?')){ localStorage.removeItem('capa_last_id'); byId('id').value=''; ensureID(); }
   });
 
-  // Exportar backup
-  byId('exportar').addEventListener('click', ()=>{
-    const data = loadAll();
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='ACONFEX_CAPA_backup.json'; a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  // Filtros
+  // ---------------- Lista eventos ----------------
   byId('fSemana').addEventListener('change', renderList);
   byId('fCliente').addEventListener('input', renderList);
   byId('limpiarFiltros').addEventListener('click', ()=>{
     byId('fSemana').value=''; byId('fCliente').value=''; renderList();
   });
 
-  // Lista (acciones incluyendo Duplicar)
   byId('lista').addEventListener('click', async (ev)=>{
     const b = ev.target.closest('button'); if(!b) return;
     const act = b.dataset.act, id=b.dataset.id;
@@ -586,10 +713,129 @@
     if(act==='dup'){
       const newId = nextID();
       const dup = {...d, id:newId, ts:Date.now()};
-      // No guardo automáticamente; la idea es que edites antes de guardar
       fillForm(dup);
       alert('Copia lista para editar: ' + newId);
     }
+    if(act==='promover'){
+      openRuleEditor({
+        rid: null,
+        hito: d.cuando || 'H-48 a Gate-in',
+        texto: d.definitiva ? d.definitiva : (d.quePaso ? ('Evitar recurrencia: ' + d.quePaso) : ''),
+        evidencia: d.evidencia || '',
+        owner: d.respD || 'Max',
+        active: true
+      });
+    }
+  });
+
+  // ---------------- Modal reglas globales ----------------
+  const rulesModal = byId('rulesModal');
+  const editModal = byId('editRuleModal');
+  let editingRid = null;
+
+  function openRules(){
+    renderRulesList();
+    rulesModal.style.display='flex';
+  }
+  function closeRules(){ rulesModal.style.display='none'; }
+  byId('openRules').addEventListener('click', openRules);
+  byId('closeRules').addEventListener('click', closeRules);
+
+  function renderRulesList(){
+    const wrap = byId('rulesList'); wrap.innerHTML='';
+    const rules = loadRules();
+    if(!rules.length){ wrap.innerHTML = '<div class="hint">Aún no hay reglas. Crea una con “Nueva regla” o desde una CAPA con “Promover”.</div>'; return; }
+    rules.forEach(r=>{
+      const el = document.createElement('div');
+      el.className='item';
+      el.innerHTML = `
+        <div>
+          <strong>${r.rid}</strong> — <small>${r.hito}</small><br/>
+          ${escapeHTML(r.texto||'(sin texto)')}<br/>
+          <small>Evidencia: ${escapeHTML(r.evidencia||'—')} · Dueño: ${escapeHTML(r.owner||'')}</small>
+        </div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" data-rid="${r.rid}" data-act="toggle" ${r.active?'checked':''}/> Activa</label>
+          <button class="btn" data-rid="${r.rid}" data-act="edit">Editar</button>
+          <button class="btn ghost" data-rid="${r.rid}" data-act="del">Borrar</button>
+        </div>`;
+      wrap.appendChild(el);
+    });
+  }
+
+  byId('rulesList').addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('button');
+    const chk = ev.target.closest('input[type="checkbox"][data-act="toggle"]');
+    const rules = loadRules();
+    if(chk){
+      const rid = chk.dataset.rid;
+      const i = rules.findIndex(x=>x.rid===rid);
+      if(i>=0){ rules[i].active = chk.checked; saveRules(rules); renderPrevChecklist(); }
+      return;
+    }
+    if(!btn) return;
+    const act = btn.dataset.act, rid = btn.dataset.rid;
+    const i = rules.findIndex(x=>x.rid===rid);
+    if(i<0) return;
+    if(act==='del'){
+      if(confirm('¿Eliminar '+rid+'?')){ rules.splice(i,1); saveRules(rules); renderRulesList(); renderPrevChecklist(); }
+    }
+    if(act==='edit'){
+      openRuleEditor(rules[i]);
+    }
+  });
+
+  // Crear desde cero
+  byId('newRule').addEventListener('click', ()=>{
+    openRuleEditor({ rid:null, hito:'H-48 a Gate-in', texto:'', evidencia:'', owner:'Max', active:true });
+  });
+
+  // Editor de regla (modal)
+  function openRuleEditor(rule){
+    editingRid = rule.rid || null;
+    byId('ruleTitle').textContent = rule.rid ? ('Editar '+rule.rid) : 'Nueva regla';
+    byId('ruleHito').value = rule.hito || 'H-48 a Gate-in';
+    byId('ruleOwner').value = rule.owner || 'Max';
+    byId('ruleActive').checked = (rule.active!==false);
+    byId('ruleTexto').value = rule.texto || '';
+    byId('ruleEvid').value = rule.evidencia || '';
+    editModal.style.display='flex';
+  }
+  function closeRuleEditor(){ editModal.style.display='none'; }
+  byId('cancelRule').addEventListener('click', closeRuleEditor);
+
+  byId('saveRule').addEventListener('click', ()=>{
+    const hito = byId('ruleHito').value;
+    const owner = byId('ruleOwner').value;
+    const active = byId('ruleActive').checked;
+    const texto = byId('ruleTexto').value.trim();
+    const evidencia = byId('ruleEvid').value.trim();
+    if(!texto){ alert('Escribe la regla (1 línea, verificable)'); return; }
+    const rules = loadRules();
+    if(editingRid){
+      const i = rules.findIndex(x=>x.rid===editingRid);
+      if(i>=0){ rules[i] = {...rules[i], hito, owner, active, texto, evidencia}; }
+    }else{
+      rules.unshift({ rid: nextRuleID(), hito, owner, active, texto, evidencia, created_ts: Date.now() });
+    }
+    saveRules(rules);
+    closeRuleEditor();
+    renderRulesList();
+    renderPrevChecklist();
+  });
+
+  // Cerrar modales clic fuera
+  [byId('rulesModal'), byId('editRuleModal'), byId('printModal')].forEach(m=>{
+    m.addEventListener('click', (e)=>{ if(e.target===m) m.style.display='none'; });
+  });
+
+  // Exportar backup
+  byId('exportar').addEventListener('click', ()=>{
+    const data = loadAll();
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='ACONFEX_CAPA_backup.json'; a.click();
+    URL.revokeObjectURL(url);
   });
 
   // init
