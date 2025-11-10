@@ -41,6 +41,7 @@
     .row{display:flex;gap:8px;align-items:center}
     .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
     .help{border-bottom:1px dotted var(--muted);cursor:pointer}
+    .select-trigger{border-bottom:1px dotted var(--muted);cursor:pointer}
 
     .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:40px}
@@ -250,10 +251,14 @@
           </div>
         </div>
 
-        <h3>Evidencias (PDF/PNG/JPG) <span class="tag">se guardan localmente</span></h3>
+        <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
         <div class="uploader" id="dropZone">
-          <p>Arrastra archivos aquí o <label for="evidInput" class="help" title="Selecciona archivos de tu equipo"><span class="kbd">Selecciona</span></label></p>
-          <input id="evidInput" type="file" accept="application/pdf,image/png,image/jpeg" multiple style="display:none"/>
+          <p>Arrastra archivos aquí o 
+            <!-- IMPORTANTE: esta etiqueta NO tiene clase .help para no interceptar el click en iOS -->
+            <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
+          </p>
+          <!-- En iOS el input debe existir y no estar display:none para permitir apertura confiable -->
+          <input id="evidInput" type="file" accept="application/pdf,image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>
         </div>
         <div class="evidence-list" id="evidList"></div>
 
@@ -353,6 +358,8 @@
       if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1).toString()+" MB";
     }
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
     // Semana 0–52 (0-based) desde fecha (ISO week - 1)
     function week0to52(dateStr){
       if(!dateStr) return 0;
@@ -398,7 +405,7 @@
     }
 
     // ========= Estado del formulario =========
-    let currentEvidenceKeys = []; // claves en IndexedDB
+    let currentEvidenceKeys = [];
 
     function fillWeekSelect(){
       const s = $('#semanaSel'); s.innerHTML='';
@@ -521,7 +528,7 @@
       setWeekSelect(w);
     });
 
-    // ========= Tooltip accesible (móvil/desktop) =========
+    // ========= Tooltip accesible =========
     let openTip = null;
     function setupHelpTips(){
       $$('.help').forEach(el=>{
@@ -568,11 +575,11 @@
 
     async function addFiles(fileList){
       for(const file of fileList){
-        if(!['application/pdf','image/png','image/jpeg'].includes(file.type)) continue;
+        if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue;
         let blob = file;
         if(file.type.startsWith('image/')){
-          blob = await compressImage(file, 1600, 85);
-          try{ blob.name = file.name; }catch(_){/* opcional */}
+          try{ blob = await compressImage(file, 1600, 85); blob.name = file.name; }
+          catch(_){ /* si no se pudo comprimir, usamos el original */ }
         }
         const key = `ev:${crypto.randomUUID()}`;
         await DB.set(key, blob);
@@ -638,16 +645,25 @@
     }
 
     function previewBlob(blob, title='Vista previa'){
+      const url = URL.createObjectURL(blob);
+      if(blob.type==='application/pdf' && isIOS){
+        // iOS Safari no muestra blob PDF en iframe/embed: abrir nueva pestaña
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 10000);
+        return;
+      }
       const modal = $('#modal');
       const content = $('#modalContent');
       $('#modalTitle').textContent = title;
       content.innerHTML = '';
-      const url = URL.createObjectURL(blob);
       if(blob.type.startsWith('image/')){
         const img = document.createElement('img'); img.src = url; content.appendChild(img);
       } else if(blob.type==='application/pdf'){
-        const iframe = document.createElement('iframe');
-        iframe.src = url; content.appendChild(iframe);
+        const embed = document.createElement('embed');
+        embed.type = 'application/pdf';
+        embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
+        embed.style.width = '80vw'; embed.style.maxWidth = '900px'; embed.style.height = '70vh';
+        content.appendChild(embed);
       } else {
         const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
       }
@@ -758,7 +774,14 @@
     $('#btnPDFVer').addEventListener('click', async ()=>{
       const obj = collectForm();
       const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      previewBlob(blob, name);
+      if(isIOS){
+        // iOS: abrir en pestaña nueva para garantizar visualización
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 10000);
+      }else{
+        previewBlob(blob, name);
+      }
     });
     $('#btnPDFShare').addEventListener('click', async ()=>{
       const obj = collectForm();
@@ -930,6 +953,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .row{display:flex;gap:8px;align-items:center}
     .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
     .help{border-bottom:1px dotted var(--muted);cursor:pointer}
+    .select-trigger{border-bottom:1px dotted var(--muted);cursor:pointer}
 
     .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:40px}
@@ -1139,10 +1163,14 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
           </div>
         </div>
 
-        <h3>Evidencias (PDF/PNG/JPG) <span class="tag">se guardan localmente</span></h3>
+        <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
         <div class="uploader" id="dropZone">
-          <p>Arrastra archivos aquí o <label for="evidInput" class="help" title="Selecciona archivos de tu equipo"><span class="kbd">Selecciona</span></label></p>
-          <input id="evidInput" type="file" accept="application/pdf,image/png,image/jpeg" multiple style="display:none"/>
+          <p>Arrastra archivos aquí o 
+            <!-- IMPORTANTE: esta etiqueta NO tiene clase .help para no interceptar el click en iOS -->
+            <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
+          </p>
+          <!-- En iOS el input debe existir y no estar display:none para permitir apertura confiable -->
+          <input id="evidInput" type="file" accept="application/pdf,image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>
         </div>
         <div class="evidence-list" id="evidList"></div>
 
@@ -1242,6 +1270,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1).toString()+" MB";
     }
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
     // Semana 0–52 (0-based) desde fecha (ISO week - 1)
     function week0to52(dateStr){
       if(!dateStr) return 0;
@@ -1287,7 +1317,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     }
 
     // ========= Estado del formulario =========
-    let currentEvidenceKeys = []; // claves en IndexedDB
+    let currentEvidenceKeys = [];
 
     function fillWeekSelect(){
       const s = $('#semanaSel'); s.innerHTML='';
@@ -1410,7 +1440,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       setWeekSelect(w);
     });
 
-    // ========= Tooltip accesible (móvil/desktop) =========
+    // ========= Tooltip accesible =========
     let openTip = null;
     function setupHelpTips(){
       $$('.help').forEach(el=>{
@@ -1457,11 +1487,11 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     async function addFiles(fileList){
       for(const file of fileList){
-        if(!['application/pdf','image/png','image/jpeg'].includes(file.type)) continue;
+        if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue;
         let blob = file;
         if(file.type.startsWith('image/')){
-          blob = await compressImage(file, 1600, 85);
-          try{ blob.name = file.name; }catch(_){/* opcional */}
+          try{ blob = await compressImage(file, 1600, 85); blob.name = file.name; }
+          catch(_){ /* si no se pudo comprimir, usamos el original */ }
         }
         const key = `ev:${crypto.randomUUID()}`;
         await DB.set(key, blob);
@@ -1527,16 +1557,25 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     }
 
     function previewBlob(blob, title='Vista previa'){
+      const url = URL.createObjectURL(blob);
+      if(blob.type==='application/pdf' && isIOS){
+        // iOS Safari no muestra blob PDF en iframe/embed: abrir nueva pestaña
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 10000);
+        return;
+      }
       const modal = $('#modal');
       const content = $('#modalContent');
       $('#modalTitle').textContent = title;
       content.innerHTML = '';
-      const url = URL.createObjectURL(blob);
       if(blob.type.startsWith('image/')){
         const img = document.createElement('img'); img.src = url; content.appendChild(img);
       } else if(blob.type==='application/pdf'){
-        const iframe = document.createElement('iframe');
-        iframe.src = url; content.appendChild(iframe);
+        const embed = document.createElement('embed');
+        embed.type = 'application/pdf';
+        embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
+        embed.style.width = '80vw'; embed.style.maxWidth = '900px'; embed.style.height = '70vh';
+        content.appendChild(embed);
       } else {
         const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
       }
@@ -1647,7 +1686,14 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     $('#btnPDFVer').addEventListener('click', async ()=>{
       const obj = collectForm();
       const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      previewBlob(blob, name);
+      if(isIOS){
+        // iOS: abrir en pestaña nueva para garantizar visualización
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 10000);
+      }else{
+        previewBlob(blob, name);
+      }
     });
     $('#btnPDFShare').addEventListener('click', async ()=>{
       const obj = collectForm();
