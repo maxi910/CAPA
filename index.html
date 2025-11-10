@@ -4,9 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa." />
-
-  <!-- Estilos minimalistas sin dependencias pesadas -->
+  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -30,7 +28,7 @@
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:8px;outline:none;appearance:none}
     textarea{min-height:88px;resize:vertical}
 
     .row{display:flex;gap:8px;align-items:center}
@@ -103,11 +101,11 @@
         <h2>Nuevo/Editar CAPA</h2>
         <div class="grid g3">
           <div>
-            <label>ID (fijo)</label>
-            <input id="capaId" placeholder="Se genera al guardar" readonly>
+            <label>ID (auto)</label>
+            <input id="capaId" placeholder="CAPA-001" readonly>
           </div>
           <div>
-            <label>Revisión <span class="help" title="Número de versión del mismo CAPA. El ID no cambia; la revisión aumenta cuando actualizas información del mismo caso para mantener historial.">¿Qué es?</span></label>
+            <label>Revisión <span class="help" title="Número de versión del mismo CAPA. El ID no cambia; la revisión aumenta para mantener historial.">¿Qué es?</span></label>
             <input id="capaRev" type="number" value="0" min="0">
           </div>
           <div>
@@ -124,15 +122,15 @@
         <div class="grid g3">
           <div>
             <label>Fecha de detección <span class="help" title="Cuándo se detectó el problema por primera vez">¿Qué es?</span></label>
-            <input id="fechaDeteccion" type="date">
+            <input id="fechaDeteccion" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
             <label>Fecha de cierre comprometida <span class="help" title="Fecha objetivo para cerrar definitivamente la CAPA tras completar acciones y verificación">¿Qué es?</span></label>
-            <input id="fechaCierre" type="date">
+            <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
-            <label>Semana (0–52) <span class="help" title="Semana del año del evento (0=primera semana). Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</span></label>
-            <input id="semana" type="number" min="0" max="52" placeholder="auto">
+            <label>Semana (S00–S52) <span class="help" title="Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</span></label>
+            <select id="semanaSel"></select>
           </div>
         </div>
 
@@ -161,6 +159,26 @@
               <option value="Alta">Alta</option>
               <option value="Crítica">Crítica</option>
             </select>
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label>Probabilidad (manual)</label>
+            <select id="probabilidad">
+              <option value="1">Muy baja (1)</option>
+              <option value="2">Baja (2)</option>
+              <option value="3">Media (3)</option>
+              <option value="4">Alta (4)</option>
+            </select>
+          </div>
+          <div>
+            <label>Nivel de riesgo (S×P)</label>
+            <div id="riesgoPill" class="risk r-low">Bajo · 1</div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="tag">Regla: Baja=1 · Media=2 · Alta=3 · Crítica=4</div>
           </div>
         </div>
 
@@ -285,6 +303,8 @@
                 <th>Semana</th>
                 <th>¿Dónde?</th>
                 <th>Gravedad</th>
+                <th>Prob.</th>
+                <th>Riesgo</th>
                 <th>Proveedor/Cliente</th>
                 <th>Acciones</th>
               </tr>
@@ -321,12 +341,11 @@
 
     const DB = idbKeyval; // IndexedDB para evidencias (blobs)
 
-    const keySeq = () => `capa:seq:${new Date().getFullYear()}`;
+    const keySeq = () => `capa:seq:global`;
     const nextId = () => {
-      const y = new Date().getFullYear();
       let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1;
       localStorage.setItem(keySeq(), String(seq));
-      return `${y}-${String(seq).padStart(4,'0')}`; // p.ej. 2025-0007
+      return `CAPA-${String(seq).padStart(3,'0')}`;
     }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
@@ -336,12 +355,11 @@
 
     // Semana 0–52 (0-based) desde fecha (ISO week - 1)
     function week0to52(dateStr){
-      if(!dateStr) return '';
+      if(!dateStr) return 0;
       const d = new Date(dateStr);
-      // Calcular ISO week number
       const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNr = (target.getUTCDay() + 6) % 7;
-      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves
+      const dayNr = (target.getUTCDay() + 6) % 7; // lunes=0
+      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves ISO
       const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
       const week = 1 + Math.round(((target - firstThursday)/86400000 - 3) / 7);
       return Math.max(0, Math.min(52, week - 1));
@@ -359,8 +377,43 @@
 
     function getCapa(id){ return readCapas().find(x=>x.id===id); }
 
+    // ========= Riesgo =========
+    const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
+    function calcRisk(gravedad, prob){
+      const s = sevToNum(gravedad); const p = parseInt(prob||1,10);
+      const score = s*p;
+      let level = 'Bajo', cls = 'r-low';
+      if(score>=4 && score<=6){ level='Medio'; cls='r-med'; }
+      if(score>=7 && score<=9){ level='Alto'; cls='r-high'; }
+      if(score>=10){ level='Crítico'; cls='r-crit'; }
+      return {score, level, cls};
+    }
+
+    function updateRiskPill(){
+      const g = $('#gravedad').value; const p = $('#probabilidad').value;
+      const {score, level, cls} = calcRisk(g,p);
+      const pill = $('#riesgoPill');
+      pill.className = 'risk ' + cls;
+      pill.textContent = `${level} · ${score}`;
+    }
+
     // ========= Estado del formulario =========
     let currentEvidenceKeys = []; // claves en IndexedDB
+
+    function fillWeekSelect(){
+      const s = $('#semanaSel'); s.innerHTML='';
+      for(let i=0;i<=52;i++){
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `S${String(i).padStart(2,'0')}`;
+        s.appendChild(opt);
+      }
+    }
+    function setWeekSelect(n){
+      const s = $('#semanaSel');
+      if(n==='' || n==null || Number.isNaN(n)) s.value = '0'; else s.value = String(Math.max(0,Math.min(52, n)));
+    }
+    function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
     function clearForm(){
       $('#capaId').value = '';
@@ -369,10 +422,12 @@
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      $('#semana').value = '';
+      setWeekSelect(0);
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
+      $('#probabilidad').value = '1';
+      updateRiskPill();
       $('#reporta').value = '';
       $('#desc').value = '';
       $('#accionContencion').value = '';
@@ -397,10 +452,12 @@
       $('#capaEstado').value = obj.estado||'Abierta';
       $('#fechaDeteccion').value = obj.fechaDeteccion||'';
       $('#fechaCierre').value = obj.fechaCierre||'';
-      $('#semana').value = (obj.semana ?? week0to52(obj.fechaDeteccion) ?? '')
+      setWeekSelect(typeof obj.semana==='number'? obj.semana : week0to52(obj.fechaDeteccion));
       $('#donde').value = obj.donde||'Campo';
       $('#tercero').value = obj.tercero||'';
       $('#gravedad').value = obj.gravedad||'Baja';
+      $('#probabilidad').value = String(obj.probabilidad||1);
+      updateRiskPill();
       $('#reporta').value = obj.reporta||'';
       $('#desc').value = obj.desc||'';
       $('#accionContencion').value = obj.accionContencion||'';
@@ -420,16 +477,21 @@
 
     function collectForm(){
       const id = $('#capaId').value || nextId();
+      const g = $('#gravedad').value; const p = $('#probabilidad').value;
+      const risk = calcRisk(g,p);
       const obj = {
         id,
         revision: parseInt($('#capaRev').value||'0',10),
         estado: $('#capaEstado').value,
         fechaDeteccion: $('#fechaDeteccion').value,
         fechaCierre: $('#fechaCierre').value,
-        semana: $('#semana').value === '' ? week0to52($('#fechaDeteccion').value) : parseInt($('#semana').value,10),
+        semana: getWeekNumber(),
         donde: $('#donde').value,
         tercero: $('#tercero').value.trim(),
-        gravedad: $('#gravedad').value,
+        gravedad: g,
+        probabilidad: parseInt(p,10),
+        riesgoScore: risk.score,
+        riesgoNivel: risk.level,
         reporta: $('#reporta').value.trim(),
         desc: $('#desc').value.trim(),
         accionContencion: $('#accionContencion').value.trim(),
@@ -449,10 +511,14 @@
       return obj;
     }
 
+    // Eventos de riesgo
+    $('#gravedad').addEventListener('change', updateRiskPill);
+    $('#probabilidad').addEventListener('change', updateRiskPill);
+
     // Autocalcular semana al cambiar fecha
     $('#fechaDeteccion').addEventListener('change', ()=>{
       const w = week0to52($('#fechaDeteccion').value);
-      if($('#semana').value==='') $('#semana').value = w;
+      setWeekSelect(w);
     });
 
     // ========= Evidencias =========
@@ -460,7 +526,7 @@
     const input = $('#evidInput');
 
     drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background = '#0b1119';})
-    drop.addEventListener('dragleave', e=>{ drop.style.background = '#0e141d';})
+    drop.addEventListener('dragleave', ()=>{ drop.style.background = '#0e141d';})
     drop.addEventListener('drop', async (e)=>{
       e.preventDefault(); drop.style.background = '#0e141d';
       await addFiles(e.dataTransfer.files);
@@ -473,11 +539,10 @@
     async function addFiles(fileList){
       for(const file of fileList){
         if(!['application/pdf','image/png','image/jpeg'].includes(file.type)) continue;
-        // comprimir imágenes para ahorrar espacio
         let blob = file;
         if(file.type.startsWith('image/')){
           blob = await compressImage(file, 1600, 85);
-          blob.name = file.name;
+          try{ blob.name = file.name; }catch(_){/* opcional */}
         }
         const key = `ev:${crypto.randomUUID()}`;
         await DB.set(key, blob);
@@ -507,7 +572,7 @@
         if(!blob) continue;
         const div = document.createElement('div');
         div.className = 'ev';
-        let isImg = blob.type.startsWith('image/');
+        const isImg = blob.type.startsWith('image/');
         if(isImg){
           const img = document.createElement('img');
           img.className = 'thumb'; img.alt='';
@@ -569,8 +634,8 @@
     }
 
     // ========= Tabla =========
-    function riskClass(g){
-      return g==='Crítica'?'r-crit':g==='Alta'?'r-high':g==='Media'?'r-med':'r-low';
+    function riskClassFromLevel(level){
+      return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low';
     }
 
     function renderTable(){
@@ -580,14 +645,18 @@
       tbody.innerHTML='';
       for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
         const tr = document.createElement('tr');
+        const level = x.riesgoNivel || calcRisk(x.gravedad, x.probabilidad||1).level;
+        const score = x.riesgoScore || calcRisk(x.gravedad, x.probabilidad||1).score;
         tr.innerHTML = `
           <td><span class="kbd">${x.id}</span></td>
           <td>${x.revision??0}</td>
           <td><span class="state ${x.estado==='Abierta'?'s-open':x.estado==='En contención'?'s-hold':x.estado==='En curso'?'s-run':'s-done'}">${x.estado}</span></td>
           <td>${fmt(x.fechaDeteccion)}</td>
-          <td>${x.semana ?? ''}</td>
+          <td>${x.semana!=null ? `S${String(x.semana).padStart(2,'0')}` : ''}</td>
           <td>${x.donde||''}</td>
-          <td><span class="risk ${riskClass(x.gravedad)}">${x.gravedad||'Baja'}</span></td>
+          <td>${x.gravedad||'Baja'}</td>
+          <td>${x.probabilidad||1}</td>
+          <td><span class="risk ${riskClassFromLevel(level)}">${level} · ${score}</span></td>
           <td>${x.tercero||''}</td>
           <td>
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
@@ -668,7 +737,6 @@
       if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
         try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'}); }catch(e){}
       }else{
-        // Fallback: abrir en nueva pestaña
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
@@ -680,7 +748,6 @@
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({unit:'pt', format:'a4'});
 
-      // Asegurar evidencias sincronizadas si vino de tabla
       if(obj && obj.id){ currentEvidenceKeys = obj.evidenceKeys || []; }
 
       const margin = 36; let y = margin;
@@ -696,9 +763,11 @@
       row('Estado', obj.estado);
       row('Fecha detección', fmt(obj.fechaDeteccion));
       row('Fecha cierre comprometida', fmt(obj.fechaCierre));
-      row('Semana', obj.semana);
+      row('Semana', (obj.semana!=null? `S${String(obj.semana).padStart(2,'0')}` : ''));
       row('¿Dónde?', obj.donde);
-      row('Gravedad (matriz de riesgo)', obj.gravedad);
+      row('Gravedad', obj.gravedad);
+      row('Probabilidad', obj.probabilidad);
+      row('Riesgo (S×P)', `${obj.riesgoNivel} · ${obj.riesgoScore}`);
       row('Proveedor/Cliente', obj.tercero);
       row('Quien reporta', obj.reporta);
 
@@ -723,7 +792,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
-      for(const key of (obj.evidenceKeys||[])){
+      const keySet = new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]);
+      for(const key of keySet){
         const blob = await DB.get(key); if(!blob) continue;
         if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob);
       }
@@ -740,7 +810,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         const img = await loadImage(dataUrl);
         const ratio = Math.min(boxW/img.width, boxH/img.height);
         const w = img.width*ratio, h = img.height*ratio;
-        pdf.addImage(dataUrl, 'JPEG', x + (boxW-w)/2, y + (boxH-h)/2, w, h);
+        const fmtI = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        pdf.addImage(dataUrl, fmtI, x + (boxW-w)/2, y + (boxH-h)/2, w, h);
         pdf.setDrawColor(220); pdf.rect(x, y, boxW, boxH);
         col++;
         if(col===2){ col=0; x=margin; y += boxH + gap; if(y>740){ pdf.addPage(); y = margin; } }
@@ -779,6 +850,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
     // ========= Init =========
+    fillWeekSelect();
     clearForm();
     renderTable();
   </script>
@@ -790,9 +862,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa." />
-
-  <!-- Estilos minimalistas sin dependencias pesadas -->
+  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -816,7 +886,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:8px;outline:none;appearance:none}
     textarea{min-height:88px;resize:vertical}
 
     .row{display:flex;gap:8px;align-items:center}
@@ -889,11 +959,11 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         <h2>Nuevo/Editar CAPA</h2>
         <div class="grid g3">
           <div>
-            <label>ID (fijo)</label>
-            <input id="capaId" placeholder="Se genera al guardar" readonly>
+            <label>ID (auto)</label>
+            <input id="capaId" placeholder="CAPA-001" readonly>
           </div>
           <div>
-            <label>Revisión <span class="help" title="Número de versión del mismo CAPA. El ID no cambia; la revisión aumenta cuando actualizas información del mismo caso para mantener historial.">¿Qué es?</span></label>
+            <label>Revisión <span class="help" title="Número de versión del mismo CAPA. El ID no cambia; la revisión aumenta para mantener historial.">¿Qué es?</span></label>
             <input id="capaRev" type="number" value="0" min="0">
           </div>
           <div>
@@ -910,15 +980,15 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         <div class="grid g3">
           <div>
             <label>Fecha de detección <span class="help" title="Cuándo se detectó el problema por primera vez">¿Qué es?</span></label>
-            <input id="fechaDeteccion" type="date">
+            <input id="fechaDeteccion" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
             <label>Fecha de cierre comprometida <span class="help" title="Fecha objetivo para cerrar definitivamente la CAPA tras completar acciones y verificación">¿Qué es?</span></label>
-            <input id="fechaCierre" type="date">
+            <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
-            <label>Semana (0–52) <span class="help" title="Semana del año del evento (0=primera semana). Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</span></label>
-            <input id="semana" type="number" min="0" max="52" placeholder="auto">
+            <label>Semana (S00–S52) <span class="help" title="Se autocalcula desde la Fecha de detección; puedes ajustar manualmente.">ⓘ</span></label>
+            <select id="semanaSel"></select>
           </div>
         </div>
 
@@ -947,6 +1017,26 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
               <option value="Alta">Alta</option>
               <option value="Crítica">Crítica</option>
             </select>
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label>Probabilidad (manual)</label>
+            <select id="probabilidad">
+              <option value="1">Muy baja (1)</option>
+              <option value="2">Baja (2)</option>
+              <option value="3">Media (3)</option>
+              <option value="4">Alta (4)</option>
+            </select>
+          </div>
+          <div>
+            <label>Nivel de riesgo (S×P)</label>
+            <div id="riesgoPill" class="risk r-low">Bajo · 1</div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="tag">Regla: Baja=1 · Media=2 · Alta=3 · Crítica=4</div>
           </div>
         </div>
 
@@ -1071,6 +1161,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
                 <th>Semana</th>
                 <th>¿Dónde?</th>
                 <th>Gravedad</th>
+                <th>Prob.</th>
+                <th>Riesgo</th>
                 <th>Proveedor/Cliente</th>
                 <th>Acciones</th>
               </tr>
@@ -1107,12 +1199,11 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     const DB = idbKeyval; // IndexedDB para evidencias (blobs)
 
-    const keySeq = () => `capa:seq:${new Date().getFullYear()}`;
+    const keySeq = () => `capa:seq:global`;
     const nextId = () => {
-      const y = new Date().getFullYear();
       let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1;
       localStorage.setItem(keySeq(), String(seq));
-      return `${y}-${String(seq).padStart(4,'0')}`; // p.ej. 2025-0007
+      return `CAPA-${String(seq).padStart(3,'0')}`;
     }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
@@ -1122,12 +1213,11 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     // Semana 0–52 (0-based) desde fecha (ISO week - 1)
     function week0to52(dateStr){
-      if(!dateStr) return '';
+      if(!dateStr) return 0;
       const d = new Date(dateStr);
-      // Calcular ISO week number
       const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNr = (target.getUTCDay() + 6) % 7;
-      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves
+      const dayNr = (target.getUTCDay() + 6) % 7; // lunes=0
+      target.setUTCDate(target.getUTCDate() - dayNr + 3); // jueves ISO
       const firstThursday = new Date(Date.UTC(target.getUTCFullYear(),0,4));
       const week = 1 + Math.round(((target - firstThursday)/86400000 - 3) / 7);
       return Math.max(0, Math.min(52, week - 1));
@@ -1145,8 +1235,43 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     function getCapa(id){ return readCapas().find(x=>x.id===id); }
 
+    // ========= Riesgo =========
+    const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
+    function calcRisk(gravedad, prob){
+      const s = sevToNum(gravedad); const p = parseInt(prob||1,10);
+      const score = s*p;
+      let level = 'Bajo', cls = 'r-low';
+      if(score>=4 && score<=6){ level='Medio'; cls='r-med'; }
+      if(score>=7 && score<=9){ level='Alto'; cls='r-high'; }
+      if(score>=10){ level='Crítico'; cls='r-crit'; }
+      return {score, level, cls};
+    }
+
+    function updateRiskPill(){
+      const g = $('#gravedad').value; const p = $('#probabilidad').value;
+      const {score, level, cls} = calcRisk(g,p);
+      const pill = $('#riesgoPill');
+      pill.className = 'risk ' + cls;
+      pill.textContent = `${level} · ${score}`;
+    }
+
     // ========= Estado del formulario =========
     let currentEvidenceKeys = []; // claves en IndexedDB
+
+    function fillWeekSelect(){
+      const s = $('#semanaSel'); s.innerHTML='';
+      for(let i=0;i<=52;i++){
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `S${String(i).padStart(2,'0')}`;
+        s.appendChild(opt);
+      }
+    }
+    function setWeekSelect(n){
+      const s = $('#semanaSel');
+      if(n==='' || n==null || Number.isNaN(n)) s.value = '0'; else s.value = String(Math.max(0,Math.min(52, n)));
+    }
+    function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
     function clearForm(){
       $('#capaId').value = '';
@@ -1155,10 +1280,12 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      $('#semana').value = '';
+      setWeekSelect(0);
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
+      $('#probabilidad').value = '1';
+      updateRiskPill();
       $('#reporta').value = '';
       $('#desc').value = '';
       $('#accionContencion').value = '';
@@ -1183,10 +1310,12 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       $('#capaEstado').value = obj.estado||'Abierta';
       $('#fechaDeteccion').value = obj.fechaDeteccion||'';
       $('#fechaCierre').value = obj.fechaCierre||'';
-      $('#semana').value = (obj.semana ?? week0to52(obj.fechaDeteccion) ?? '')
+      setWeekSelect(typeof obj.semana==='number'? obj.semana : week0to52(obj.fechaDeteccion));
       $('#donde').value = obj.donde||'Campo';
       $('#tercero').value = obj.tercero||'';
       $('#gravedad').value = obj.gravedad||'Baja';
+      $('#probabilidad').value = String(obj.probabilidad||1);
+      updateRiskPill();
       $('#reporta').value = obj.reporta||'';
       $('#desc').value = obj.desc||'';
       $('#accionContencion').value = obj.accionContencion||'';
@@ -1206,16 +1335,21 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     function collectForm(){
       const id = $('#capaId').value || nextId();
+      const g = $('#gravedad').value; const p = $('#probabilidad').value;
+      const risk = calcRisk(g,p);
       const obj = {
         id,
         revision: parseInt($('#capaRev').value||'0',10),
         estado: $('#capaEstado').value,
         fechaDeteccion: $('#fechaDeteccion').value,
         fechaCierre: $('#fechaCierre').value,
-        semana: $('#semana').value === '' ? week0to52($('#fechaDeteccion').value) : parseInt($('#semana').value,10),
+        semana: getWeekNumber(),
         donde: $('#donde').value,
         tercero: $('#tercero').value.trim(),
-        gravedad: $('#gravedad').value,
+        gravedad: g,
+        probabilidad: parseInt(p,10),
+        riesgoScore: risk.score,
+        riesgoNivel: risk.level,
         reporta: $('#reporta').value.trim(),
         desc: $('#desc').value.trim(),
         accionContencion: $('#accionContencion').value.trim(),
@@ -1235,10 +1369,14 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       return obj;
     }
 
+    // Eventos de riesgo
+    $('#gravedad').addEventListener('change', updateRiskPill);
+    $('#probabilidad').addEventListener('change', updateRiskPill);
+
     // Autocalcular semana al cambiar fecha
     $('#fechaDeteccion').addEventListener('change', ()=>{
       const w = week0to52($('#fechaDeteccion').value);
-      if($('#semana').value==='') $('#semana').value = w;
+      setWeekSelect(w);
     });
 
     // ========= Evidencias =========
@@ -1246,7 +1384,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     const input = $('#evidInput');
 
     drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background = '#0b1119';})
-    drop.addEventListener('dragleave', e=>{ drop.style.background = '#0e141d';})
+    drop.addEventListener('dragleave', ()=>{ drop.style.background = '#0e141d';})
     drop.addEventListener('drop', async (e)=>{
       e.preventDefault(); drop.style.background = '#0e141d';
       await addFiles(e.dataTransfer.files);
@@ -1259,11 +1397,10 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     async function addFiles(fileList){
       for(const file of fileList){
         if(!['application/pdf','image/png','image/jpeg'].includes(file.type)) continue;
-        // comprimir imágenes para ahorrar espacio
         let blob = file;
         if(file.type.startsWith('image/')){
           blob = await compressImage(file, 1600, 85);
-          blob.name = file.name;
+          try{ blob.name = file.name; }catch(_){/* opcional */}
         }
         const key = `ev:${crypto.randomUUID()}`;
         await DB.set(key, blob);
@@ -1293,7 +1430,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         if(!blob) continue;
         const div = document.createElement('div');
         div.className = 'ev';
-        let isImg = blob.type.startsWith('image/');
+        const isImg = blob.type.startsWith('image/');
         if(isImg){
           const img = document.createElement('img');
           img.className = 'thumb'; img.alt='';
@@ -1355,8 +1492,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     }
 
     // ========= Tabla =========
-    function riskClass(g){
-      return g==='Crítica'?'r-crit':g==='Alta'?'r-high':g==='Media'?'r-med':'r-low';
+    function riskClassFromLevel(level){
+      return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low';
     }
 
     function renderTable(){
@@ -1366,14 +1503,18 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       tbody.innerHTML='';
       for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
         const tr = document.createElement('tr');
+        const level = x.riesgoNivel || calcRisk(x.gravedad, x.probabilidad||1).level;
+        const score = x.riesgoScore || calcRisk(x.gravedad, x.probabilidad||1).score;
         tr.innerHTML = `
           <td><span class="kbd">${x.id}</span></td>
           <td>${x.revision??0}</td>
           <td><span class="state ${x.estado==='Abierta'?'s-open':x.estado==='En contención'?'s-hold':x.estado==='En curso'?'s-run':'s-done'}">${x.estado}</span></td>
           <td>${fmt(x.fechaDeteccion)}</td>
-          <td>${x.semana ?? ''}</td>
+          <td>${x.semana!=null ? `S${String(x.semana).padStart(2,'0')}` : ''}</td>
           <td>${x.donde||''}</td>
-          <td><span class="risk ${riskClass(x.gravedad)}">${x.gravedad||'Baja'}</span></td>
+          <td>${x.gravedad||'Baja'}</td>
+          <td>${x.probabilidad||1}</td>
+          <td><span class="risk ${riskClassFromLevel(level)}">${level} · ${score}</span></td>
           <td>${x.tercero||''}</td>
           <td>
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
@@ -1454,7 +1595,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
         try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'}); }catch(e){}
       }else{
-        // Fallback: abrir en nueva pestaña
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
         setTimeout(()=>URL.revokeObjectURL(url), 10000);
@@ -1466,7 +1606,6 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({unit:'pt', format:'a4'});
 
-      // Asegurar evidencias sincronizadas si vino de tabla
       if(obj && obj.id){ currentEvidenceKeys = obj.evidenceKeys || []; }
 
       const margin = 36; let y = margin;
@@ -1482,9 +1621,11 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       row('Estado', obj.estado);
       row('Fecha detección', fmt(obj.fechaDeteccion));
       row('Fecha cierre comprometida', fmt(obj.fechaCierre));
-      row('Semana', obj.semana);
+      row('Semana', (obj.semana!=null? `S${String(obj.semana).padStart(2,'0')}` : ''));
       row('¿Dónde?', obj.donde);
-      row('Gravedad (matriz de riesgo)', obj.gravedad);
+      row('Gravedad', obj.gravedad);
+      row('Probabilidad', obj.probabilidad);
+      row('Riesgo (S×P)', `${obj.riesgoNivel} · ${obj.riesgoScore}`);
       row('Proveedor/Cliente', obj.tercero);
       row('Quien reporta', obj.reporta);
 
@@ -1509,7 +1650,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
-      for(const key of (obj.evidenceKeys||[])){
+      const keySet = new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]);
+      for(const key of keySet){
         const blob = await DB.get(key); if(!blob) continue;
         if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob);
       }
@@ -1526,7 +1668,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         const img = await loadImage(dataUrl);
         const ratio = Math.min(boxW/img.width, boxH/img.height);
         const w = img.width*ratio, h = img.height*ratio;
-        pdf.addImage(dataUrl, 'JPEG', x + (boxW-w)/2, y + (boxH-h)/2, w, h);
+        const fmtI = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        pdf.addImage(dataUrl, fmtI, x + (boxW-w)/2, y + (boxH-h)/2, w, h);
         pdf.setDrawColor(220); pdf.rect(x, y, boxW, boxH);
         col++;
         if(col===2){ col=0; x=margin; y += boxH + gap; if(y>740){ pdf.addPage(); y = margin; } }
@@ -1565,6 +1708,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
     // ========= Init =========
+    fillWeekSelect();
     clearForm();
     renderTable();
   </script>
