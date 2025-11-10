@@ -1137,5 +1137,46 @@ Cambio de procedimiento/documento: ${yesNo(obj.camProc)}`, margin, y, 520);
     // Restaurar modo grande
     const big = localStorage.getItem('capa_ui_big')==='1'; document.getElementById('bigToggle').checked=big; document.body.classList.toggle('big', big);
   </script>
+  <script>
+// === CONFIG ===
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycb.../exec"; // ← tu URL /exec
+const API_KEY    = "TU_SECRETO_LARGO";                                  // ← tu API_KEY
+
+// === HELPERS Drive WebApp (sin CORS/preflight) ===
+async function driveSaveCapa(capa){
+  const fd = new FormData();
+  fd.append("key", API_KEY);
+  fd.append("action", "savecapa");
+  fd.append("capa", JSON.stringify(capa));
+  const r = await fetch(WEBAPP_URL, { method:"POST", body: fd });
+  const j = await r.json(); if(!j.ok) throw new Error(j.error||"save failed");
+  return j.id;
+}
+async function driveUploadEvidence(capaId, file){
+  const fd = new FormData();
+  fd.append("key", API_KEY);
+  fd.append("action", "uploadevidence");
+  fd.append("id", capaId);
+  fd.append("file", file, file.name);
+  const r = await fetch(WEBAPP_URL, { method:"POST", body: fd });
+  const j = await r.json(); if(!j.ok) throw new Error(j.error||"upload failed");
+  return j.items; // [{id,name,mimeType,size,url}]
+}
+async function driveListCapas(){
+  const r = await fetch(`${WEBAPP_URL}?action=list&key=${encodeURIComponent(API_KEY)}`);
+  const j = await r.json(); if(!j.ok) throw new Error(j.error||"list failed");
+  return j.items; // [{id,updated}]
+}
+async function driveGetCapa(id){
+  const r = await fetch(`${WEBAPP_URL}?action=get&id=${encodeURIComponent(id)}&key=${encodeURIComponent(API_KEY)}`);
+  const j = await r.json(); if(!j.ok) throw new Error(j.error||"get failed");
+  return j.data; // objeto CAPA
+}
+async function driveListEvidences(id){
+  const r = await fetch(`${WEBAPP_URL}?action=evidences&id=${encodeURIComponent(id)}&key=${encodeURIComponent(API_KEY)}`);
+  const j = await r.json(); if(!j.ok) throw new Error(j.error||"ev list failed");
+  return j.items; // cada item trae .url público
+}
+</script>
 </body>
 </html>
