@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
   <meta name="description" content="Gestor CAPA simple, auditable ISO 9001. Guarda localmente, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
-  <link rel="apple-touch-icon" sizes="180x180" href="capa (2).jpg?v=1">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -40,6 +40,9 @@
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
     input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
+    /* ✅ Mostrar controles nativos para checks/radios (iPhone/PC) */
+    input[type="checkbox"], input[type="radio"]{ -webkit-appearance:auto; appearance:auto; background:initial; border:initial; padding:0; width:18px; height:18px; border-radius:4px; accent-color: var(--accent); vertical-align:middle }
+    label.row{ cursor:pointer }
     textarea{min-height:88px;resize:vertical}
     input[type="checkbox"]{width:auto}
     input[type="radio"]{width:auto}
