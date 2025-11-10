@@ -83,7 +83,7 @@
     <div class="grid grid3">
       <div>
         <label>ID (auto)</label>
-        <input id="id" type="text" readonly/>
+        <input id="id" type="text" readonly placeholder=""/>
       </div>
       <div>
         <label>Semana</label>
@@ -173,25 +173,6 @@
           <option>Planta</option>
           <option>Otro</option>
         </select>
-      </div>
-    </div>
-
-    <div>
-      <label>¿DÓNDE se detectó? (marca 1 o 2)</label>
-      <div class="row">
-        <label class="pill"><input type="checkbox" class="donde" value="Campo/Cosecha"/> Campo/Cosecha</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Transporte interno"/> Transporte interno</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Planta/Packing"/> Planta/Packing</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Cámara/Pre-frío"/> Cámara/Pre-frío</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Documental/Oficina"/> Documental/Oficina</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Naviera/Forwarder"/> Naviera/Forwarder</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Agencia Aduana"/> Agencia Aduana</label>
-        <label class="pill"><input type="checkbox" class="donde" value="SAG/Inspección"/> SAG/Inspección</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Seguro/Aseguradora"/> Seguro/Aseguradora</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Cliente/Destino"/> Cliente/Destino</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Reefer/Equipo"/> Reefer/Equipo</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Financiero/Contabilidad"/> Financiero/Contabilidad</label>
-        <label class="pill"><input type="checkbox" class="donde" value="Otro"/> Otro</label>
       </div>
     </div>
 
@@ -356,9 +337,10 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 (() => {
-  const APP_VERSION = '2025.11.09-03';
+  const APP_VERSION = '2025.11.09-04';
   document.getElementById('verTag').textContent = 'v' + APP_VERSION;
 
+  // --- SW (rompe caché) ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js?v='+APP_VERSION).catch(()=>{});
   }
@@ -367,7 +349,10 @@
   const $$ = s => Array.from(document.querySelectorAll(s));
   const byId = id => document.getElementById(id);
 
-  // ---------------- Semanas ----------------
+  // ---------- Utilidades comunes ----------
+  function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+  // ---------- Semanas ----------
   function fillWeeks(selectEl, includeAll=false){
     const base = includeAll ? '<option value="">Todas</option>' : '<option value="">— Seleccionar —</option>';
     selectEl.innerHTML = base + Array.from({length:52},(_,i)=>{
@@ -378,29 +363,19 @@
   fillWeeks(byId('semana'), false);
   fillWeeks(byId('fSemana'), true);
 
-  // ---------------- IDs ----------------
-  function nextID(){
-    const key='capa_last_id';
-    const n = (parseInt(localStorage.getItem(key)||'0',10) || 0) + 1;
-    localStorage.setItem(key, String(n));
-    return 'CAPA-' + String(n).padStart(3,'0');
-  }
-  function ensureID(){ if(!byId('id').value.trim()) byId('id').value = nextID(); }
-  ensureID();
+  // ---------- ID: previsualizar sin consumir; consumir solo al guardar/pdf/compartir ----------
+  function getLastID(){ return parseInt(localStorage.getItem('capa_last_id') || '0', 10) || 0; }
+  function peekNextIDStr(){ return 'CAPA-' + String(getLastID() + 1).padStart(3,'0'); } // no consume
+  function consumeNextIDStr(){ const n = getLastID() + 1; localStorage.setItem('capa_last_id', String(n)); return 'CAPA-' + String(n).padStart(3,'0'); }
+  function initIDPreview(){ const el = byId('id'); if(el){ el.placeholder = peekNextIDStr(); } }
+  function assignIDIfNeeded(){ const el = byId('id'); if(el && !el.value.trim()){ el.value = consumeNextIDStr(); } }
+  initIDPreview(); // solo muestra el próximo como placeholder
 
-  // ---------------- Reglas globales (prevenciones) ----------------
+  // ---------- Reglas globales (prevenciones) ----------
   function loadRules(){ try{ return JSON.parse(localStorage.getItem('capa_rules')||'[]'); }catch{ return []; } }
   function saveRules(arr){ localStorage.setItem('capa_rules', JSON.stringify(arr)); }
-  function nextRuleID(){
-    const key='capa_last_rule_id';
-    const n = (parseInt(localStorage.getItem(key)||'0',10) || 0) + 1;
-    localStorage.setItem(key, String(n));
-    return 'R' + String(n).padStart(3,'0');
-  }
-
-  function ruleMatchesHito(ruleHito, hito){
-    return ruleHito === 'Todas' || ruleHito === hito;
-  }
+  function nextRuleID(){ const key='capa_last_rule_id'; const n=(parseInt(localStorage.getItem(key)||'0',10)||0)+1; localStorage.setItem(key,String(n)); return 'R'+String(n).padStart(3,'0'); }
+  function ruleMatchesHito(ruleHito, hito){ return ruleHito === 'Todas' || ruleHito === hito; }
 
   function renderPrevChecklist(){
     const hito = byId('cuando').value;
@@ -415,7 +390,6 @@
     }
     block.style.display='block';
     lbl.textContent = hito;
-    // preservar selección previa
     const currentChecked = new Set($$('.prev_chk:checked').map(x=>x.value));
     wrap.innerHTML = rules.map(r => `
       <label class="pill" title="${escapeHTML(r.evidencia||'')}">
@@ -424,10 +398,9 @@
       </label>
     `).join('');
   }
-
   byId('cuando').addEventListener('change', ()=>{ applyAutoSemIfNeeded(); renderPrevChecklist(); });
 
-  // ---------------- Semáforo automático ----------------
+  // ---------- Semáforo automático ----------
   const urgencyColor = (cuando) => {
     switch (cuando) {
       case 'H-24 a Gate-in':
@@ -449,7 +422,6 @@
   const worstColor = (a,b) => (colorRank(a) >= colorRank(b) ? a : b);
   function getManualSem(){ const r = $$('input[name="sem"]:checked')[0]; return r? r.value : ''; }
   function setManualSem(color){ $$('input[name="sem"]').forEach(r => r.checked = (r.value===color)); }
-
   function applyAutoSemIfNeeded(){
     const auto = byId('autoSem').checked;
     if(!auto) return;
@@ -465,28 +437,14 @@
   });
   byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
 
-  // ---------------- Form helpers ----------------
-  function getDonde(){
-    const v = $$('.donde:checked').map(x=>x.value);
-    return v.slice(0,2).join(', ');
-  }
-  function getResp(name, otherId){
-    const r = $$(`input[name="${name}"]:checked`)[0];
-    if(!r) return '';
-    if(r.value==='Otro'){
-      const v = $(otherId).value.trim();
-      return v? v : 'Otro';
-    }
-    return r.value;
-  }
-  function getPrevAplicadas(){
-    return $$('.prev_chk:checked').map(x=>x.value);
-  }
+  // ---------- Form helpers ----------
+  function getDonde(){ const v = $$('.donde:checked').map(x=>x.value); return v.slice(0,2).join(', '); }
+  function getResp(name, otherId){ const r = $$(`input[name="${name}"]:checked`)[0]; if(!r) return ''; if(r.value==='Otro'){ const v = $(otherId).value.trim(); return v? v : 'Otro'; } return r.value; }
+  function getPrevAplicadas(){ return $$('.prev_chk:checked').map(x=>x.value); }
 
   function readForm(){
-    ensureID();
     return {
-      id: byId('id').value.trim(),
+      id: byId('id').value.trim(),                    // NO generar aquí
       semana: byId('semana').value,
       cntr: byId('cntr').value.trim(),
       cliente: byId('cliente').value.trim(),
@@ -524,7 +482,7 @@
     return true;
   }
 
-  // ---------------- Persistencia CAPA ----------------
+  // ---------- Persistencia CAPA ----------
   function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
   function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
   function upsert(d){
@@ -534,13 +492,8 @@
     saveAll(arr); renderList();
   }
 
-  // ---------------- Lista + filtros ----------------
-  function getFilters(){
-    return {
-      semana: byId('fSemana').value,
-      cliente: byId('fCliente').value.trim().toLowerCase()
-    };
-  }
+  // ---------- Lista + filtros ----------
+  function getFilters(){ return { semana: byId('fSemana').value, cliente: byId('fCliente').value.trim().toLowerCase() }; }
   function applyFilters(arr){
     const f = getFilters();
     return arr.filter(d=>{
@@ -588,29 +541,19 @@
     byId('definitiva').value=d.definitiva; byId('fechaD').value=d.fechaD;
     byId('cierre').value=d.cierre; byId('verif').value=d.verif;
     $$('input[name="sem"]').forEach(x=>x.checked = (x.value===d.semaforo));
-    // prevenciones marcadas
     renderPrevChecklist();
     const set = new Set(d.prev_aplicadas||[]);
     $$('.prev_chk').forEach(cb => cb.checked = set.has(cb.value));
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  // ---------------- PDF ----------------
-  function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  // ---------- PDF ----------
   function fmtDate(s){ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(); }catch(e){return s;} }
   function badge(color,text){ const map={Rojo:'#ff5d5d',Amarillo:'#ffcc00',Verde:'#3bd16f'}; const c=map[color]||'#999'; return `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${c};display:inline-block"></span>${text||color}</span>`; }
-
   function mapPrevenciones(ids){
-    const rules = loadRules();
-    const pick = [];
-    ids = ids||[];
-    ids.forEach(rid => {
-      const r = rules.find(x=>x.rid===rid);
-      if(r) pick.push(r.texto);
-    });
+    const rules = loadRules(); const pick = []; (ids||[]).forEach(rid=>{ const r=rules.find(x=>x.rid===rid); if(r) pick.push(r.texto); });
     return pick;
   }
-
   function buildPrintCard(d){
     const prev = mapPrevenciones(d.prev_aplicadas);
     const prevHTML = prev.length ? ('<ul>' + prev.map(p=>'<li>'+escapeHTML(p)+'</li>').join('') + '</ul>') : '<em>—</em>';
@@ -639,7 +582,6 @@
       </div>
     `;
   }
-
   async function toPDF(d, share=false){
     const modal = byId('printModal'), card = byId('printCard');
     card.innerHTML = buildPrintCard(d);
@@ -663,8 +605,11 @@
     pdf.save(fname);
   }
 
-  // ---------------- Eventos form ----------------
+  // ---------- Eventos form ----------
+  byId('autoSem').addEventListener('change', ()=>{ /* ya manejado arriba */ });
+
   byId('guardar').addEventListener('click', ()=>{
+    assignIDIfNeeded();                 // asigna ID solo si falta
     const d = readForm();
     applyAutoSemIfNeeded();
     d.semaforo = getManualSem();
@@ -672,30 +617,42 @@
     upsert(d);
     alert('CAPA guardada: ' + d.id);
   });
+
   byId('pdf').addEventListener('click', async ()=>{
+    assignIDIfNeeded();                 // asigna ID solo si falta
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,false);
   });
+
   byId('compartir').addEventListener('click', async ()=>{
+    assignIDIfNeeded();                 // asigna ID solo si falta
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,true);
   });
+
   byId('limpiar').addEventListener('click', ()=>{
-    const keepID = byId('id').value;
     ['cntr','cliente','criterio','quePaso','causa','evidencia','contencion','definitiva','respC_otro','respD_otro','verif'].forEach(id=>{ const el=byId(id); if(el) el.value=''; });
     ['semana','cuando','quien','estado','gravedad'].forEach(id=>byId(id).value='');
     ['fechaC','fechaD','cierre'].forEach(id=>byId(id).value='');
     $$('input[name="sem"]').forEach(x=>x.checked=false);
     $$('.donde').forEach(x=>x.checked=false);
     byId('autoSem').checked=false; byId('semManual').style.pointerEvents='auto'; byId('semManual').style.opacity=1;
-    byId('id').value = keepID || nextID();
+    // reset ID sin consumir
+    byId('id').value = '';
+    initIDPreview();
+    // prevenciones UI
     byId('prevChecklist').innerHTML=''; byId('prevBlock').style.display='none';
   });
+
   byId('resetID').addEventListener('click', ()=>{
-    if(confirm('¿Reiniciar contador de ID?')){ localStorage.removeItem('capa_last_id'); byId('id').value=''; ensureID(); }
+    if(confirm('¿Reiniciar contador de ID?')){
+      localStorage.removeItem('capa_last_id');
+      byId('id').value='';
+      initIDPreview();
+    }
   });
 
-  // ---------------- Lista eventos ----------------
+  // ---------- Lista eventos ----------
   byId('fSemana').addEventListener('change', renderList);
   byId('fCliente').addEventListener('input', renderList);
   byId('limpiarFiltros').addEventListener('click', ()=>{
@@ -711,10 +668,10 @@
     if(act==='pdf'){ await toPDF(d,false); }
     if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ saveAll(arr.filter(x=>x.id!==id)); renderList(); } }
     if(act==='dup'){
-      const newId = nextID();
-      const dup = {...d, id:newId, ts:Date.now()};
+      const dup = {...d, id:'', ts:Date.now()}; // sin ID → se asigna al guardar/pdf/compartir
       fillForm(dup);
-      alert('Copia lista para editar: ' + newId);
+      initIDPreview();
+      alert('Copia lista para editar. El ID se asignará al Guardar/PDF/Compartir.');
     }
     if(act==='promover'){
       openRuleEditor({
@@ -728,15 +685,12 @@
     }
   });
 
-  // ---------------- Modal reglas globales ----------------
+  // ---------- Modal reglas globales ----------
   const rulesModal = byId('rulesModal');
   const editModal = byId('editRuleModal');
   let editingRid = null;
 
-  function openRules(){
-    renderRulesList();
-    rulesModal.style.display='flex';
-  }
+  function openRules(){ renderRulesList(); rulesModal.style.display='flex'; }
   function closeRules(){ rulesModal.style.display='none'; }
   byId('openRules').addEventListener('click', openRules);
   byId('closeRules').addEventListener('click', closeRules);
@@ -785,12 +739,10 @@
     }
   });
 
-  // Crear desde cero
   byId('newRule').addEventListener('click', ()=>{
     openRuleEditor({ rid:null, hito:'H-48 a Gate-in', texto:'', evidencia:'', owner:'Max', active:true });
   });
 
-  // Editor de regla (modal)
   function openRuleEditor(rule){
     editingRid = rule.rid || null;
     byId('ruleTitle').textContent = rule.rid ? ('Editar '+rule.rid) : 'Nueva regla';
@@ -829,7 +781,7 @@
     m.addEventListener('click', (e)=>{ if(e.target===m) m.style.display='none'; });
   });
 
-  // Exportar backup
+  // ---------- Exportar backup ----------
   byId('exportar').addEventListener('click', ()=>{
     const data = loadAll();
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -838,7 +790,7 @@
     URL.revokeObjectURL(url);
   });
 
-  // init
+  // ---------- Inicializar lista ----------
   renderList();
 })();
 </script>
