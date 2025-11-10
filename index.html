@@ -4,9 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA, ISO 9001. Guarda en Google Drive via Apps Script, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
-  <!-- Icono iPhone 180x180 (puede ser .jpg o .png) -->
-  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1" />
+  <meta name="description" content="Gestor CAPA simple, auditable ISO 9001. Guarda localmente, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -41,10 +40,12 @@
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
     input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
-    /* iPhone/PC: controles nativos en checks/radios */
+    /* ✅ Mostrar controles nativos para checks/radios (iPhone/PC) */
     input[type="checkbox"], input[type="radio"]{ -webkit-appearance:auto; appearance:auto; background:initial; border:initial; padding:0; width:18px; height:18px; border-radius:4px; accent-color: var(--accent); vertical-align:middle }
     label.row{ cursor:pointer }
     textarea{min-height:88px;resize:vertical}
+    input[type="checkbox"]{width:auto}
+    input[type="radio"]{width:auto}
 
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
@@ -89,6 +90,7 @@
     .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:var(--bd);background:#0e141d;color:var(--muted);font-size:12px}
     .pill input{width:auto;background:transparent;border:none;padding:0;color:var(--ink)}
 
+    .footer{color:var(--muted);font-size:12px;margin:18px 0 6px}
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0e141d;border:var(--bd);border-radius:6px;padding:2px 6px}
 
     /* Tooltip accesible (click/touch) */
@@ -113,14 +115,13 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="logo" aria-hidden="true"><img src="logo.png" alt="ACONFEX" /></div>
+      <div class="logo" aria-hidden="true"><img src="logo.png" alt="ACONFEX"></div>
       <div>
         <h1>ACONFEX · CAPA</h1>
-        <div class="sub">Correctivas y Preventivas · ISO 9001 · 100% Drive-ready</div>
+        <div class="sub">Correctivas y Preventivas · auditable ISO 9001 · 100% local (no envía datos)</div>
       </div>
       <div class="topbar">
         <label class="row" style="gap:6px"><input id="bigToggle" type="checkbox"> <span class="tag">Modo grande</span></label>
-        <button id="btnPing" class="ghost" title="Probar conexión con el WebApp de Google">Probar Drive</button>
       </div>
     </header>
 
@@ -151,11 +152,11 @@
 
         <div class="grid g3">
           <div>
-            <label>Fecha de detección</label>
+            <label>Fecha de detección <button type="button" class="help" title="Cuándo se detectó el problema por primera vez">¿Qué es?</button></label>
             <input id="fechaDeteccion" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
-            <label>Fecha de cierre comprometida</label>
+            <label>Fecha de cierre comprometida <button type="button" class="help" title="Fecha objetivo para cerrar definitivamente la CAPA tras completar acciones y verificación">¿Qué es?</button></label>
             <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
           </div>
           <div>
@@ -306,7 +307,7 @@
           <label class="row"><input type="checkbox" data-iso="evidencias"> Evidencias adjuntas</label>
         </div>
 
-        <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente y se suben a Drive al guardar</span></h3>
+        <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
         <div class="uploader" id="dropZone">
           <p>Arrastra archivos aquí o 
             <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
@@ -321,7 +322,7 @@
           <button id="btnEnviarRevision" class="review">Enviar a revisión (+1)</button>
           <button id="btnCerrar" class="ghost">Marcar como cerrada</button>
           <button id="btnNuevo" class="ghost">Limpiar formulario</button>
-          <span class="pill">ID fijo · Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span>
+          <span class="pill">ID fijo <span title="El ID no cambia entre revisiones">ⓘ</span> · <span>Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span></span>
         </div>
 
         <div class="actions" style="margin-top:6px">
@@ -374,9 +375,11 @@
         </div>
       </section>
     </div>
+
+    <div class="footer">Publica como <span class="kbd">index.html</span> en GitHub Pages. 100% local (IndexedDB + localStorage). Sube tu <span class="kbd">icon-180.jpg</span> para iPhone.</div>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal para vista previa de evidencias y PDF -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-inner">
       <div class="modal-head">
@@ -387,7 +390,7 @@
     </div>
   </div>
 
-  <!-- Librerías -->
+  <!-- Librerías por CDN -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -395,68 +398,38 @@
   <script>if(window['pdfjsLib']){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';}</script>
 
   <script>
-    /* =========================================================
-       0) CONFIGURACIÓN CLOUD (Apps Script)
-       Reemplaza WEBAPP_URL y API_KEY por tus valores
-       ========================================================= */
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyKmw3Muw7GZp2rVudMB1tyPgSKc3dsO-r-d8z9HBWSTs8GRChqIbNsFwKsex_zL5xq/exec"; // ← tu /exec
-    const API_KEY = 'maxi-aconfex-2025-9Fh3s2KpQx4Z7wLmB8';                                       // ← tu clave
-
-    /* =========================================================
-       1) Anti-duplicado (bug típico al pegar en GitHub Pages)
-       ========================================================= */
+    // ========= Anti-duplicado =========
     (function antiDup(){
       window.addEventListener('DOMContentLoaded', ()=>{
         const wraps = document.querySelectorAll('.wrap');
         for(let i=1;i<wraps.length;i++) wraps[i].remove();
-        ['formCard','listCard','modal'].forEach(id=>{
-          const nodes=document.querySelectorAll('#'+id);
-          for(let i=1;i<nodes.length;i++) nodes[i].remove();
-        });
+        ['formCard','listCard'].forEach(id=>{ const nodes=document.querySelectorAll('#'+id); for(let i=1;i<nodes.length;i++) nodes[i].remove(); });
       });
     })();
 
-    /* =========================================================
-       2) Utilidades base
-       ========================================================= */
-    const $  = sel => document.querySelector(sel);
+    // ========= Utilidades =========
+    const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
     const DB = idbKeyval; // IndexedDB para evidencias (blobs)
+
+    const keySeq = () => `capa:seq:global`;
+    const nextId = () => { let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1; localStorage.setItem(keySeq(), String(seq)); return `CAPA-${String(seq).padStart(3,'0')}`; }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
     const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    // ID autoincremental local si aún no existe (primer guardado)
-    const keySeq = () => `capa:seq:global`;
-    const nextId = () => { let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1; localStorage.setItem(keySeq(), String(seq)); return `CAPA-${String(seq).padStart(3,'0')}`; }
+    function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
+    function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
+    function upsertCapa(obj){ const arr=readCapas(); const idx=arr.findIndex(x=>x.id===obj.id); if(idx>=0) arr[idx]=obj; else arr.unshift(obj); writeCapas(arr); renderTable(); }
+    function getCapa(id){ return readCapas().find(x=>x.id===id); }
 
-    /* =========================================================
-       3) Cálculo de riesgo
-       ========================================================= */
+    // ========= Riesgo =========
     const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
-    function calcRisk(gravedad, prob){
-      const s=sevToNum(gravedad);
-      const p=parseInt(prob||1,10);
-      const score=s*p;
-      let level='Bajo', cls='r-low';
-      if(score>=4 && score<=6){level='Medio';cls='r-med';}
-      if(score>=7 && score<=9){level='Alto';cls='r-high';}
-      if(score>=10){level='Crítico';cls='r-crit';}
-      return {score, level, cls};
-    }
-    function updateRiskPill(){
-      const g=$('#gravedad').value;
-      const p=$('#probabilidad').value;
-      const {score,level,cls}=calcRisk(g,p);
-      const pill=$('#riesgoPill');
-      pill.className='risk '+cls;
-      pill.textContent=`${level} · ${score}`;
-    }
+    function calcRisk(gravedad, prob){ const s=sevToNum(gravedad); const p=parseInt(prob||1,10); const score=s*p; let level='Bajo', cls='r-low'; if(score>=4 && score<=6){level='Medio';cls='r-med';} if(score>=7 && score<=9){level='Alto';cls='r-high';} if(score>=10){level='Crítico';cls='r-crit';} return {score, level, cls}; }
+    function updateRiskPill(){ const g=$('#gravedad').value; const p=$('#probabilidad').value; const {score,level,cls}=calcRisk(g,p); const pill=$('#riesgoPill'); pill.className='risk '+cls; pill.textContent=`${level} · ${score}`; }
 
-    /* =========================================================
-       4) Estado del formulario
-       ========================================================= */
+    // ========= Estado del formulario =========
     let currentEvidenceKeys = [];
     let currentEditingId = null;
 
@@ -470,264 +443,38 @@
     function getISOChecklist(){ const o={}; $$('#isoChecklist [data-iso]').forEach(cb=>o[cb.dataset.iso]=cb.checked); return o; }
     function setISOChecklist(o){ $$('#isoChecklist [data-iso]').forEach(cb=> cb.checked = !!(o && o[cb.dataset.iso])); }
 
-    function clearForm(){
-      currentEditingId=null;
-      $('#formCard').classList.remove('pulse');
-      $('#capaId').value='';
-      $('#capaRev').value=0; $('#revQuick').value=0;
-      $('#capaEstado').value='Abierta';
-      $('#fechaDeteccion').value=''; $('#fechaCierre').value='';
-      setWeekSelect(0);
-      $('#donde').value='Campo'; $('#tercero').value='';
-      $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill();
-      $('#reporta').value=''; $('#desc').value='';
-      $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').checked=false;
-      $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').checked=false;
-      $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value='';
-      $('#actRiesgos').checked=false; $('#camProc').checked=false;
-      setCtrl87(''); setISOChecklist({});
-      currentEvidenceKeys=[]; renderEvidence();
-    }
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').checked=false; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').checked=false; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; $('#actRiesgos').checked=false; $('#camProc').checked=false; setCtrl87(''); setISOChecklist({}); currentEvidenceKeys=[]; renderEvidence(); }
 
-    function loadForm(obj){
-      currentEditingId=obj.id;
-      $('#capaId').value=obj.id;
-      $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0;
-      $('#capaEstado').value=obj.estado||'Abierta';
-      $('#fechaDeteccion').value=obj.fechaDeteccion||'';
-      $('#fechaCierre').value=obj.fechaCierre||'';
-      setWeekSelect(typeof obj.semana==='number'?obj.semana:0);
-      $('#donde').value=obj.donde||'Campo';
-      $('#tercero').value=obj.tercero||'';
-      $('#gravedad').value=obj.gravedad||'Baja';
-      $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill();
-      $('#reporta').value=obj.reporta||'';
-      $('#desc').value=obj.desc||'';
-      $('#accionContencion').value=obj.accionContencion||'';
-      $('#respContencion').value=obj.respContencion||'';
-      $('#fechaContencion').value=obj.fechaContencion||'';
-      $('#doneContencion').checked = !!obj.doneContencion;
-      $('#accionDefinitiva').value=obj.accionDefinitiva||'';
-      $('#respDefinitiva').value=obj.respDefinitiva||'';
-      $('#fechaDefinitiva').value=obj.fechaDefinitiva||'';
-      $('#doneDefinitiva').checked = !!obj.doneDefinitiva;
-      $('#causaRaiz').value=obj.causaRaiz||'';
-      $('#planVerif').value=obj.planVerif||'';
-      $('#fechaVerif').value=obj.fechaVerif||'';
-      $('#actRiesgos').checked=!!obj.actRiesgos;
-      $('#camProc').checked=!!obj.camProc;
-      setCtrl87(obj.control87||'');
-      setISOChecklist(obj.isoChecklist||{});
-      currentEvidenceKeys = Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[];
-      renderEvidence();
-      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400);
-    }
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').checked = (obj.doneContencion===true || obj.doneContencion==='Sí'); $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').checked = (obj.doneDefinitiva===true || obj.doneDefinitiva==='Sí'); $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; $('#actRiesgos').checked=!!obj.actRiesgos; $('#camProc').checked=!!obj.camProc; setCtrl87(obj.control87||''); setISOChecklist(obj.isoChecklist||{}); currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
 
-    function collectForm(){
-      const id=$('#capaId').value||nextId();
-      const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p);
-      return {
-        id,
-        revision:parseInt($('#capaRev').value||'0',10),
-        estado:$('#capaEstado').value,
-        fechaDeteccion:$('#fechaDeteccion').value,
-        fechaCierre:$('#fechaCierre').value,
-        semana:getWeekNumber(),
-        donde:$('#donde').value,
-        tercero:$('#tercero').value.trim(),
-        gravedad:g, probabilidad:parseInt(p,10),
-        riesgoScore:risk.score, riesgoNivel:risk.level,
-        reporta:$('#reporta').value.trim(),
-        desc:$('#desc').value.trim(),
-        control87:getCtrl87(),
-        accionContencion:$('#accionContencion').value.trim(),
-        respContencion:$('#respContencion').value.trim(),
-        fechaContencion:$('#fechaContencion').value,
-        doneContencion:$('#doneContencion').checked,
-        accionDefinitiva:$('#accionDefinitiva').value.trim(),
-        respDefinitiva:$('#respDefinitiva').value.trim(),
-        fechaDefinitiva:$('#fechaDefinitiva').value,
-        doneDefinitiva:$('#doneDefinitiva').checked,
-        causaRaiz:$('#causaRaiz').value.trim(),
-        planVerif:$('#planVerif').value.trim(),
-        fechaVerif:$('#fechaVerif').value,
-        actRiesgos:$('#actRiesgos').checked,
-        camProc:$('#camProc').checked,
-        isoChecklist:getISOChecklist(),
-        evidenceKeys:[...currentEvidenceKeys],
-        updatedAt:new Date().toISOString()
-      };
-    }
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), control87:getCtrl87(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').checked, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').checked, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, actRiesgos:$('#actRiesgos').checked, camProc:$('#camProc').checked, isoChecklist:getISOChecklist(), evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
 
-    $('#gravedad').addEventListener('change', updateRiskPill);
-    $('#probabilidad').addEventListener('change', updateRiskPill);
+    $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
 
-    /* =========================================================
-       5) Tooltips accesibles
-       ========================================================= */
-    let openTip=null;
-    function setupHelpTips(){
-      $$('.help').forEach(el=>{
-        const t=el.getAttribute('title')||el.dataset.help; if(!t) return;
-        el.dataset.help=t; el.removeAttribute('title'); el.setAttribute('tabindex','0');
-        el.addEventListener('click',(e)=>{e.preventDefault(); e.stopPropagation(); toggleTip(el);});
-        el.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); toggleTip(el);} });
-      });
-      document.addEventListener('click', closeTip);
-      window.addEventListener('resize', closeTip);
-      window.addEventListener('scroll', closeTip, true);
-    }
-    function toggleTip(el){
-      if(openTip && openTip.anchor===el){ closeTip(); return;}
-      closeTip();
-      const tip=document.createElement('div'); tip.className='tip'; tip.textContent=el.dataset.help;
-      document.body.appendChild(tip);
-      const r=el.getBoundingClientRect(); const top=r.bottom+window.scrollY+8; let left=r.left+window.scrollX;
-      const pad=8; const maxLeft=window.scrollX+document.documentElement.clientWidth-tip.offsetWidth-pad;
-      left=Math.min(Math.max(left,pad+window.scrollX),maxLeft);
-      tip.style.top=top+'px'; tip.style.left=left+'px'; openTip={node:tip,anchor:el};
-    }
-    function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
+    // ========= Tooltip accesible =========
+    let openTip=null; function setupHelpTips(){ $$('.help').forEach(el=>{ const t=el.getAttribute('title')||el.dataset.help; if(!t) return; el.dataset.help=t; el.removeAttribute('title'); el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0'); el.addEventListener('click',(e)=>{e.preventDefault(); e.stopPropagation(); toggleTip(el);}); el.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); toggleTip(el);} }); }); document.addEventListener('click', closeTip); window.addEventListener('resize', closeTip); window.addEventListener('scroll', closeTip, true);} function toggleTip(el){ if(openTip && openTip.anchor===el){ closeTip(); return;} closeTip(); const tip=document.createElement('div'); tip.className='tip'; tip.textContent=el.dataset.help; document.body.appendChild(tip); const r=el.getBoundingClientRect(); const top=r.bottom+window.scrollY+8; let left=r.left+window.scrollX; const pad=8; const maxLeft=window.scrollX+document.documentElement.clientWidth-tip.offsetWidth-pad; left=Math.min(Math.max(left,pad+window.scrollX),maxLeft); tip.style.top=top+'px'; tip.style.left=left+'px'; openTip={node:tip,anchor:el}; } function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
 
-    /* =========================================================
-       6) Evidencias (IndexedDB local + subida a Drive)
-       ========================================================= */
+    // ========= Evidencias =========
     const drop=$('#dropZone'); const input=$('#evidInput');
-    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background='#0b1119';});
-    drop.addEventListener('dragleave', ()=>{ drop.style.background='#0e141d';});
-    drop.addEventListener('drop', async (e)=>{ e.preventDefault(); drop.style.background='#0e141d'; await addFiles(e.dataTransfer.files); })
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background='#0b1119';}); drop.addEventListener('dragleave', ()=>{ drop.style.background='#0e141d';}); drop.addEventListener('drop', async (e)=>{ e.preventDefault(); drop.style.background='#0e141d'; await addFiles(e.dataTransfer.files); })
     input.addEventListener('change', async e=>{ await addFiles(e.target.files); input.value=''; });
 
-    async function addFiles(fileList){
-      for(const file of fileList){
-        if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue;
-        let blob=file;
-        if(file.type.startsWith('image/')){
-          try{ blob=await compressImage(file,1600,85); blob.name=file.name; }catch(_){}
-        }
-        const key=`ev:${crypto.randomUUID()}`;
-        await DB.set(key, blob);
-        currentEvidenceKeys.push(key);
-      }
-      renderEvidence();
-    }
+    async function addFiles(fileList){ for(const file of fileList){ if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue; let blob=file; if(file.type.startsWith('image/')){ try{ blob=await compressImage(file,1600,85); blob.name=file.name; }catch(_){}} const key=`ev:${crypto.randomUUID()}`; await DB.set(key, blob); currentEvidenceKeys.push(key);} renderEvidence(); }
 
-    async function compressImage(file, maxW=1600, quality=85){
-      const img=new Image(); const url=URL.createObjectURL(file);
-      await new Promise(res=>{img.onload=()=>res(); img.src=url;});
-      const scale=Math.min(1, maxW/img.width);
-      const canvas=document.createElement('canvas');
-      canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
-      const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      return await new Promise(res=> canvas.toBlob(res,'image/jpeg',quality/100));
-    }
+    async function compressImage(file, maxW=1600, quality=85){ const img=new Image(); const url=URL.createObjectURL(file); await new Promise(res=>{img.onload=()=>res(); img.src=url;}); const scale=Math.min(1, maxW/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); return await new Promise(res=> canvas.toBlob(res,'image/jpeg',quality/100)); }
 
-    async function renderEvidence(){
-      const cont=$('#evidList'); cont.innerHTML='';
-      for(const key of currentEvidenceKeys){
-        const blob=await DB.get(key); if(!blob) continue;
-        const div=document.createElement('div'); div.className='ev';
-        const isImg=blob.type.startsWith('image/');
-        if(isImg){
-          const img=document.createElement('img'); img.className='thumb'; img.alt='';
-          img.src=URL.createObjectURL(blob); img.onclick=()=> previewBlob(blob,'Imagen');
-          div.appendChild(img);
-        } else {
-          const ph=document.createElement('div'); ph.className='thumb'; ph.style.display='grid'; ph.style.placeItems='center'; ph.innerHTML='<div class="tag">PDF</div>'; ph.onclick=()=> previewBlob(blob,'Documento PDF'); div.appendChild(ph);
-        }
-        const meta=document.createElement('div'); meta.className='meta';
-        const name=document.createElement('div'); name.className='name'; name.textContent=blob.name||(isImg?'Imagen':'Documento PDF');
-        const size=document.createElement('div'); size.className='size'; size.textContent=`${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`;
-        const row=document.createElement('div'); row.className='actions';
-        const pv=document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa'; pv.onclick=()=> previewBlob(blob, name.textContent);
-        const dl=document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar'; dl.onclick=()=> downloadBlob(blob,(blob.name||'evidencia'));
-        const rm=document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar'; rm.onclick=async()=>{ await DB.del(key); currentEvidenceKeys=currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); };
-        row.append(pv,dl,rm); meta.append(name,size,row); div.appendChild(meta); cont.appendChild(div);
-      }
-    }
+    async function renderEvidence(){ const cont=$('#evidList'); cont.innerHTML=''; for(const key of currentEvidenceKeys){ const blob=await DB.get(key); if(!blob) continue; const div=document.createElement('div'); div.className='ev'; const isImg=blob.type.startsWith('image/'); if(isImg){ const img=document.createElement('img'); img.className='thumb'; img.alt=''; img.src=URL.createObjectURL(blob); img.onclick=()=> previewBlob(blob,'Imagen'); div.appendChild(img);} else { const ph=document.createElement('div'); ph.className='thumb'; ph.style.display='grid'; ph.style.placeItems='center'; ph.innerHTML='<div class="tag">PDF</div>'; ph.onclick=()=> previewBlob(blob,'Documento PDF'); div.appendChild(ph);} const meta=document.createElement('div'); meta.className='meta'; const name=document.createElement('div'); name.className='name'; name.textContent=blob.name||(isImg?'Imagen':'Documento PDF'); const size=document.createElement('div'); size.className='size'; size.textContent=`${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`; const row=document.createElement('div'); row.className='actions'; const pv=document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa'; pv.onclick=()=> previewBlob(blob, name.textContent); const dl=document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar'; dl.onclick=()=> downloadBlob(blob,(blob.name||'evidencia')); const rm=document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar'; rm.onclick=async()=>{ await DB.del(key); currentEvidenceKeys=currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); }; row.append(pv,dl,rm); meta.append(name,size,row); div.appendChild(meta); cont.appendChild(div);} }
 
-    function previewBlob(blob, title='Vista previa'){
-      const url=URL.createObjectURL(blob);
-      if(blob.type==='application/pdf' && isIOS){ window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); return; }
-      const modal=$('#modal'); const content=$('#modalContent'); $('#modalTitle').textContent=title; content.innerHTML='';
-      if(blob.type.startsWith('image/')){ const img=document.createElement('img'); img.src=url; content.appendChild(img); }
-      else if(blob.type==='application/pdf'){ const embed=document.createElement('embed'); embed.type='application/pdf'; embed.src=url+'#toolbar=1&navpanes=0&scrollbar=1'; content.appendChild(embed); }
-      else { const a=document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a); }
-      modal.classList.add('open'); document.body.classList.add('modal-open');
-    }
-    $('#modalClose').addEventListener('click', closeModal);
-    $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); });
-    function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
+    function previewBlob(blob, title='Vista previa'){ const url=URL.createObjectURL(blob); if(blob.type==='application/pdf' && isIOS){ window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); return; } const modal=$('#modal'); const content=$('#modalContent'); $('#modalTitle').textContent=title; content.innerHTML=''; if(blob.type.startsWith('image/')){ const img=document.createElement('img'); img.src=url; content.appendChild(img);} else if(blob.type==='application/pdf'){ const embed=document.createElement('embed'); embed.type='application/pdf'; embed.src=url+'#toolbar=1&navpanes=0&scrollbar=1'; content.appendChild(embed);} else { const a=document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);} modal.classList.add('open'); document.body.classList.add('modal-open'); }
+    $('#modalClose').addEventListener('click', closeModal); $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); }); function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
 
     function downloadBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 
-    /* =========================================================
-       7) Drive API (Apps Script WebApp)
-       ========================================================= */
-    async function driveGET(params){
-      const qs = new URLSearchParams(Object.assign({ key: API_KEY }, params)).toString();
-      const r = await fetch(`${WEBAPP_URL}?${qs}`);
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "Drive GET failed");
-      return j;
-    }
-    async function driveSaveCapa(capa){
-      const fd = new FormData();
-      fd.append("key", API_KEY);
-      fd.append("action", "savecapa");
-      fd.append("capa", JSON.stringify(capa));
-      const r = await fetch(WEBAPP_URL, { method:"POST", body: fd });
-      const j = await r.json();
-      if(!j.ok) throw new Error(j.error||"save failed");
-      return j.id;
-    }
-    async function driveUploadEvidence(capaId, file){
-      const fd = new FormData();
-      fd.append("key", API_KEY);
-      fd.append("action", "uploadevidence");
-      fd.append("id", capaId);
-      fd.append("file", file, file.name || "archivo");
-      const r = await fetch(WEBAPP_URL, { method:"POST", body: fd });
-      const j = await r.json();
-      if(!j.ok) throw new Error(j.error||"upload failed");
-      return j.items;
-    }
-    async function driveListCapas(){ return (await driveGET({ action:"list" })).items; }
-    async function driveGetCapa(id){ return (await driveGET({ action:"get", id })).data; }
-    async function driveListEvidences(id){ return (await driveGET({ action:"evidences", id })).items; }
-    async function drivePing(){ return (await driveGET({ action:"ping" })).msg; }
-
-    async function uploadAllEvidencesToDrive(capaId){
-      for(const key of [...new Set(currentEvidenceKeys)]){
-        const blob=await DB.get(key); if(!blob) continue;
-        const fname = blob.name || `${key}.${blob.type==='application/pdf'?'pdf':'jpg'}`;
-        const file = new File([blob], fname, {type: blob.type || 'application/octet-stream'});
-        try{ await driveUploadEvidence(capaId, file); }catch(e){ console.warn('No se pudo subir evidencia:', fname, e.message); }
-      }
-    }
-
-    /* =========================================================
-       8) Tabla desde Drive (cloud source of truth)
-       ========================================================= */
+    // ========= Tabla =========
     function stateClass(s){ return s==='Abierta'?'s-open': s==='En contención'?'s-hold': s==='En curso'?'s-run': s==='En revisión'?'s-review':'s-done'; }
     function riskClassFromLevel(level){ return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low'; }
 
-    async function renderTable(){
-      const tbody=$('#tabla tbody'); tbody.innerHTML='';
-      let items=[];
-      try{
-        items = await driveListCapas();
-      }catch(e){
-        console.warn('Fallo listando en Drive, tabla vacía:', e.message);
-      }
-      const fE=$('#fEstado').value; const fD=$('#fDonde').value; const fT=($('#fTexto').value||'').toLowerCase();
-
-      for(const x of items.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
-        const level=x.riesgoNivel||calcRisk(x.gravedad, x.probabilidad||1).level;
-        const score=x.riesgoScore||calcRisk(x.gravedad, x.probabilidad||1).score;
-        const tr=document.createElement('tr');
-        tr.innerHTML=`
+    function renderTable(){ const tbody=$('#tabla tbody'); const arr=readCapas(); const fE=$('#fEstado').value; const fD=$('#fDonde').value; const fT=($('#fTexto').value||'').toLowerCase(); tbody.innerHTML=''; for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){ const tr=document.createElement('tr'); const level=x.riesgoNivel||calcRisk(x.gravedad, x.probabilidad||1).level; const score=x.riesgoScore||calcRisk(x.gravedad, x.probabilidad||1).score; tr.innerHTML=`
           <td><span class="kbd">${x.id}</span></td>
           <td>${x.revision??0}</td>
           <td><span class="state ${stateClass(x.estado)}">${x.estado}</span></td>
@@ -742,125 +489,36 @@
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
             <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
             <button class="danger" data-act="borrar" data-id="${x.id}">Borrar</button>
-          </td>`;
-        tbody.appendChild(tr);
-      }
-    }
+          </td>`; tbody.appendChild(tr);} }
 
-    $('#tabla').addEventListener('click', async (e)=>{
-      const btn=e.target.closest('button'); if(!btn) return;
-      const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act');
-      if(!id) return;
-      if(act==='editar'){
-        try{
-          const obj = await driveGetCapa(id);
-          loadForm(obj||{id});
-          // Previews de evidencias existentes (metadatos). Se visualizan desde local si existen
-          const evs = await driveListEvidences(id);
-          // solo mostramos nombres como tag informativo:
-          if(evs && evs.length){
-            console.log('Evidencias en Drive:', evs.map(e=>e.name).join(', '));
-          }
-        }catch(er){ alert('No se pudo cargar la CAPA: '+er.message); }
-      }
-      if(act==='pdf'){
-        try{
-          const obj = await driveGetCapa(id);
-          await exportPDF(obj,{save:true});
-        }catch(er){ alert('No se pudo generar el PDF: '+er.message); }
-      }
-      if(act==='borrar'){
-        alert('Eliminación desde Drive no está habilitada en este front. (Evita errores y permisos).');
-      }
-    });
+    $('#tabla').addEventListener('click', async (e)=>{ const btn=e.target.closest('button'); if(!btn) return; const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const obj=getCapa(id); if(!obj) return; if(act==='editar'){ loadForm(obj);} if(act==='pdf'){ exportPDF(obj,{save:true}); } if(act==='borrar'){ if(confirm('¿Eliminar CAPA '+id+'?')){ const rest=readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable(); } } });
 
-    /* =========================================================
-       9) Guardado + flujos (sube JSON y evidencias)
-       ========================================================= */
-    async function upsertCapaCloud(obj){
-      const id = await driveSaveCapa(obj);
-      // si el ID estaba vacío (nuevo), muéstralo
-      if(!$('#capaId').value) $('#capaId').value = id;
-      await uploadAllEvidencesToDrive(id);
-      await renderTable();
-    }
-
-    $('#btnGuardar').addEventListener('click', async ()=>{
-      try{
-        const obj=collectForm();
-        await upsertCapaCloud(obj);
-        currentEditingId=obj.id;
-        alert('Actualizado en Drive ✔');
-      }catch(e){ alert('Error: '+e.message); }
-    });
-
-    $('#btnRevision').addEventListener('click', async ()=>{
-      try{
-        const obj=collectForm();
-        obj.revision=(parseInt(obj.revision||0,10)+1);
-        $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision;
-        await upsertCapaCloud(obj);
-        currentEditingId=obj.id;
-        alert('Guardado como nueva revisión ✔');
-      }catch(e){ alert('Error: '+e.message); }
-    });
-
-    $('#btnEnviarRevision').addEventListener('click', async ()=>{
-      try{
-        const obj=collectForm();
-        obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión';
-        $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión';
-        await upsertCapaCloud(obj);
-        alert('Enviado a revisión ✔');
-      }catch(e){ alert('Error: '+e.message); }
-    });
-
-    $('#btnCerrar').addEventListener('click', async ()=>{
-      try{
-        const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada';
-        await upsertCapaCloud(obj);
-        alert('Marcada como cerrada ✔');
-      }catch(e){ alert('Error: '+e.message); }
-    });
+    // ========= Guardado y flujos rápidos =========
+    $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
+    $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
+    $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
+    $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
 
     $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
     $('#btnNuevo').addEventListener('click', ()=> clearForm());
     $('#bigToggle').addEventListener('change', (e)=>{ document.body.classList.toggle('big', e.target.checked); localStorage.setItem('capa_ui_big', e.target.checked?'1':'0'); })
 
-    // Filtros
-    $('#fEstado').addEventListener('change', ()=>renderTable());
-    $('#fDonde').addEventListener('change', ()=>renderTable());
-    $('#fTexto').addEventListener('input',  ()=>renderTable());
+    // ========= Filtros =========
+    $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
 
-    // Backup/Import (local, por si lo usas)
-    $('#btnBackup').addEventListener('click', async ()=>{
-      const data = await driveListCapas().catch(()=>[]);
-      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-      downloadBlob(blob,'capas_backup.json');
-    });
+    // ========= Backup/Import =========
+    $('#btnBackup').addEventListener('click', ()=>{ const data=readCapas(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); downloadBlob(blob,'capas_backup.json'); });
     $('#btnImport').addEventListener('click', ()=> $('#importFile').click());
-    $('#importFile').addEventListener('change', async (e)=>{
-      const f=e.target.files[0]; if(!f) return;
-      const txt=await f.text();
-      try{
-        const arr=JSON.parse(txt);
-        for(const it of arr) await driveSaveCapa(it);
-        await renderTable();
-        alert('Importado a Drive ✔');
-      }catch(err){ alert('Archivo inválido'); }
-    });
+    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); try{ const arr=JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔'); }catch(err){ alert('Archivo inválido'); }});
 
-    // PDF
+    // ========= PDF =========
     $('#btnPDF').addEventListener('click', async ()=>{ const obj=collectForm(); await exportPDF(obj,{save:true}); });
     $('#btnPDFVer').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); if(isIOS){ const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000);} else { previewBlob(blob,name);} });
     $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
 
-    async function exportPDF(obj, opts={save:false, returnBlob:false}){
-      const { jsPDF }=window.jspdf;
-      const pdf=new jsPDF({unit:'pt', format:'a4'});
-      if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
-      const margin=36; let y=margin;
-      pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14);
+    async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14);
+      // Título y semana / riesgo a la derecha
       pdf.text('ACONFEX · CAPA', margin, 38);
       pdf.setFontSize(11); pdf.text((obj.semana!=null?`Semana S${String(obj.semana).padStart(2,'0')}`:''), 595-margin-160, 24);
       pdf.text(`Riesgo: ${obj.riesgoNivel||''} (${obj.riesgoScore||''})`, 595-margin-160, 40);
@@ -869,12 +527,7 @@
       function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
       function yesNo(v){ return v? 'Sí':'No'; }
 
-      y += 40;
-      row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado);
-      row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre));
-      row('¿Dónde?',obj.donde); row('Proveedor/Cliente',obj.tercero);
-      row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad);
-      row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Control 8.7', obj.control87||'N/A');
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('¿Dónde?',obj.donde); row('Proveedor/Cliente',obj.tercero); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Control 8.7', obj.control87||'N/A');
 
       y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
 
@@ -894,76 +547,596 @@ Cambio de procedimiento/documento: ${yesNo(obj.camProc)}`, margin, y, 520);
       if(y>700){ pdf.addPage(); y=margin; }
       pdf.setFont(undefined,'bold'); pdf.text('Checklist ISO 9001 (mínimos)', margin, y); y+=14; pdf.setFont(undefined,'normal');
       const iso=obj.isoChecklist||{}; const isoItems=[
-        ['Identificación', iso.identificacion], ['Contención', iso.contencion], ['Causa raíz', iso.causa], ['Acción correctiva', iso.accion],
-        ['Verificación eficacia', iso.verificacion], ['Riesgos/cambios', iso.riesgos], ['Trazabilidad', iso.trazabilidad], ['Evidencias', iso.evidencias]
+        ['Identificación', iso.identificacion], ['Contención', iso.contencion], ['Causa raíz', iso.causa], ['Acción correctiva', iso.accion], ['Verificación eficacia', iso.verificacion], ['Riesgos/cambios', iso.riesgos], ['Trazabilidad', iso.trazabilidad], ['Evidencias', iso.evidencias]
       ];
       for(const [k,v] of isoItems){ row(k, yesNo(!!v)); }
 
-      // Evidencias embebidas
-      const imgs=[]; const pdfs=[];
-      const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]);
-      for(const key of keySet){
-        const blob=await DB.get(key); if(!blob) continue;
-        if(blob.type.startsWith('image/')) imgs.push(blob);
-        else if(blob.type==='application/pdf') pdfs.push(blob);
-      }
+      // Evidencias
+      const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
       if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
-      const boxW=250, boxH=150, gap=14; let col=0; let x=margin;
-      for(const imgBlob of imgs){
-        const dataUrl=await blobToDataURL(imgBlob);
-        const img=await loadImage(dataUrl);
-        const ratio=Math.min(boxW/img.width, boxH/img.height);
-        const w=img.width*ratio, h=img.height*ratio;
-        const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG';
-        pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h);
-        pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH);
-        col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; }
-      }
-      if(col!==0){ y+=boxH+gap; }
-      if(pdfs.length && window['pdfjsLib']){
-        for(const pblob of pdfs){
-          try{
-            const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages;
-            for(let i=1;i<=total;i++){
-              const page=await doc.getPage(i);
-              const viewport=page.getViewport({scale:1});
-              const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale});
-              const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height);
-              const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise;
-              const dataUrl=canvas.toDataURL('image/png');
-              pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10);
-              pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height);
-            }
-          }catch(err){
-            pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin);
-          }
-        }
-      } else if(pdfs.length){
-        pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11);
-        for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12);
-      }
+      const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
+      if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
 
-      const name=`${obj.id}-CAPA.pdf`;
-      if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; }
-      if(opts.save){ pdf.save(name); }
+      const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
     }
+
     function writeMultiline(pdf, text, x, y, maxWidth){ const lines=pdf.splitTextToSize(String(text||''), maxWidth); for(const ln of lines){ pdf.text(ln, x, y); y+=16; } return y; }
     function blobToDataURL(blob){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); }); }
     function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
-    /* =========================================================
-       10) Init
-       ========================================================= */
-    fillWeekSelect(); clearForm(); setupHelpTips();
+    // ========= Init =========
+    fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
     // Restaurar modo grande
     const big = localStorage.getItem('capa_ui_big')==='1'; document.getElementById('bigToggle').checked=big; document.body.classList.toggle('big', big);
-    // Render desde Drive
-    renderTable();
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
+  <meta name="description" content="Gestor CAPA simple, auditable ISO 9001. Guarda localmente, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
+      --accent:#2a8cff; --danger:#ff5d6c; --warn:#ffb020; --ok:#29c072; --purple:#a78bfa;
+      --bd:1px solid rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";font-size:16px}
+    body.big{font-size:18px}
+    .wrap{max-width:1120px;margin:auto;padding:16px}
+    header{display:flex;gap:12px;align-items:center;margin:6px 0 16px}
+    header .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header .logo img{width:100%;height:100%;object-fit:contain;border-radius:10px;display:block}
+    header h1{font-size:20px;margin:0}
+    header .sub{color:var(--muted);font-size:12px}
+    .topbar{margin-left:auto;display:flex;gap:8px;align-items:center}
 
-    // Ping rápido
-    $('#btnPing').addEventListener('click', async ()=>{
-      try{ const msg = await drivePing(); alert('Drive OK: '+msg); }catch(e){ alert('Error Drive: '+e.message); }
-    });
+    .grid{display:grid;gap:12px}
+    .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid > *{min-width:0}
+    @media (max-width:800px){.g2,.g3{grid-template-columns:1fr}}
+    @media (max-width:480px){
+      .wrap{padding:12px}
+      .actions{flex-direction:column}
+      button{width:100%}
+    }
+
+    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px;scroll-margin-top:16px}
+    .card h2{font-size:16px;margin:0 0 8px}
+    .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
+    textarea{min-height:88px;resize:vertical}
+    input[type="checkbox"]{width:auto}
+    input[type="radio"]{width:auto}
+
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
+    .help{border-bottom:1px dotted var(--muted);cursor:pointer}
+    .select-trigger{border-bottom:1px dotted var(--muted);cursor:pointer}
+
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:42px}
+    .ghost{background:transparent;border:var(--bd);color:var(--ink)}
+    .danger{background:var(--danger)}
+    .ok{background:var(--ok)}
+    .warn{background:var(--warn)}
+    .review{background:var(--purple)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:var(--bd);text-align:left;font-size:13px}
+    th{color:var(--muted);font-weight:600}
+
+    /* Evidencias */
+    .uploader{border:2px dashed rgba(255,255,255,.12);border-radius:14px;padding:12px;text-align:center;background:#0e141d}
+    .evidence-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+    .ev{border:var(--bd);border-radius:12px;overflow:hidden;background:#0b1119}
+    .thumb{display:block;width:100%;height:120px;object-fit:cover;background:#0b0f14;cursor:pointer}
+    .ev .meta{padding:8px}
+    .ev .meta .name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ev .meta .size{font-size:11px;color:var(--muted)}
+
+    .state{font-size:11px;padding:4px 8px;border-radius:999px;border:var(--bd);display:inline-block}
+    .s-open{background:rgba(255,93,108,.12)}
+    .s-run{background:rgba(42,140,255,.12)}
+    .s-hold{background:rgba(255,176,32,.12)}
+    .s-review{background:rgba(167,139,250,.18)}
+    .s-done{background:rgba(41,192,114,.12)}
+
+    .risk{font-size:11px;padding:4px 8px;border-radius:999px;border:var(--bd);display:inline-block}
+    .r-low{background:rgba(63,179,137,.15)}
+    .r-med{background:rgba(255,176,32,.18)}
+    .r-high{background:rgba(255,93,108,.18)}
+    .r-crit{background:rgba(167,139,250,.18)}
+
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:var(--bd);background:#0e141d;color:var(--muted);font-size:12px}
+    .pill input{width:auto;background:transparent;border:none;padding:0;color:var(--ink)}
+
+    .footer{color:var(--muted);font-size:12px;margin:18px 0 6px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0e141d;border:var(--bd);border-radius:6px;padding:2px 6px}
+
+    /* Tooltip accesible (click/touch) */
+    .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:10001}
+
+    /* Modal centrado fijo */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10000}
+    .modal.open{display:flex}
+    body.modal-open{overflow:hidden}
+    .modal-inner{background:var(--panel);border:var(--bd);border-radius:14px;width:min(96vw,980px);max-height:92vh;display:flex;flex-direction:column}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:var(--bd)}
+    .modal-title{font-weight:600}
+    .modal-close{background:transparent;border:var(--bd);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+    .modal-content{padding:10px;overflow:auto}
+    .modal-content embed,.modal-content img{width:100%;height:76vh;object-fit:contain}
+
+    /* Resalte al cargar en edición */
+    .pulse{animation:pulse 1.2s ease-out 2}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(42,140,255,.6)}100%{box-shadow:0 0 0 16px rgba(42,140,255,0)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden="true"><img src="logo.png" alt="ACONFEX"></div>
+      <div>
+        <h1>ACONFEX · CAPA</h1>
+        <div class="sub">Correctivas y Preventivas</div>
+      </div>
+      <div class="topbar">
+        <label class="row" style="gap:6px"><input id="bigToggle" type="checkbox"> <span class="tag">Modo grande</span></label>
+      </div>
+    </header>
+
+    <div class="grid g2">
+      <!-- Formulario principal -->
+      <section class="card" id="formCard">
+        <h2>Nuevo/Editar CAPA</h2>
+        <div class="grid g3">
+          <div>
+            <label>ID (auto)</label>
+            <input id="capaId" placeholder="CAPA-001" readonly>
+          </div>
+          <div>
+            <label>Revisión <button type="button" class="help" title="Número de versión del mismo CAPA. El ID no cambia; la revisión aumenta para mantener historial.">¿Qué es?</button></label>
+            <input id="capaRev" type="number" value="0" min="0">
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="capaEstado">
+              <option>Abierta</option>
+              <option>En contención</option>
+              <option>En curso</option>
+              <option>En revisión</option>
+              <option>Cerrada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label>Fecha de detección <button type="button" class="help" title="Cuándo se detectó el problema por primera vez">¿Qué es?</button></label>
+            <input id="fechaDeteccion" type="date" placeholder="dd/mm/aaaa">
+          </div>
+          <div>
+            <label>Fecha de cierre comprometida <button type="button" class="help" title="Fecha objetivo para cerrar definitivamente la CAPA tras completar acciones y verificación">¿Qué es?</button></label>
+            <input id="fechaCierre" type="date" placeholder="dd/mm/aaaa">
+          </div>
+          <div>
+            <label>Semana (S00–S52)</label>
+            <select id="semanaSel"></select>
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label>¿Dónde? (proceso/lugar)</label>
+            <select id="donde">
+              <option value="Campo">Campo</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Packing">Packing</option>
+              <option value="Naviera">Naviera</option>
+              <option value="Documentación">Documentación</option>
+              <option value="Cliente">Cliente</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Proveedor/Cliente (opcional)</label>
+            <input id="tercero" placeholder="Nombre del campo, packing, naviera o cliente"/>
+          </div>
+          <div>
+            <label>Gravedad (matriz de riesgo)</label>
+            <select id="gravedad">
+              <option value="Baja">Baja</option>
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Crítica">Crítica</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label>Probabilidad (manual)</label>
+            <select id="probabilidad">
+              <option value="1">Muy baja (1)</option>
+              <option value="2">Baja (2)</option>
+              <option value="3">Media (3)</option>
+              <option value="4">Alta (4)</option>
+            </select>
+          </div>
+          <div>
+            <label>Nivel de riesgo (S×P)</label>
+            <div id="riesgoPill" class="risk r-low">Bajo · 1</div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="tag">Regla: Baja=1 · Media=2 · Alta=3 · Crítica=4</div>
+          </div>
+        </div>
+
+        <div class="grid g2">
+          <div>
+            <label>Quien reporta</label>
+            <input id="reporta" placeholder="Nombre del responsable del registro"/>
+          </div>
+          <div>
+            <label>Descripción del problema</label>
+            <textarea id="desc" placeholder="Qué ocurrió, dónde, impacto (n° pallets, cajas afectadas, lote, contenedor, etc.)"></textarea>
+          </div>
+        </div>
+
+        <!-- 8.7 Control de salidas no conformes -->
+        <h3>Control de salida no conforme (cl. 8.7)</h3>
+        <div class="row" role="radiogroup" aria-label="Control de salida no conforme">
+          <label class="row"><input type="radio" name="ctrl87" value="Retener"> Retener</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Reprocesar"> Reprocesar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Concesión"> Aceptar bajo concesión</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Desechar"> Desechar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="" checked> N/A</label>
+        </div>
+
+        <div class="grid g2">
+          <div>
+            <h3>Acción de contención <button type="button" class="help" title="Medida inmediata para contener/mitigar el impacto ahora (ej.: detener embarque del lote, re-etiquetar, aumentar inspección). NO resuelve la causa raíz.">¿Qué es?</button></h3>
+            <label>Descripción</label>
+            <textarea id="accionContencion"></textarea>
+            <div class="grid g3">
+              <div>
+                <label>Responsable</label>
+                <input id="respContencion"/>
+              </div>
+              <div>
+                <label>Fecha compromiso</label>
+                <input id="fechaContencion" type="date"/>
+              </div>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneContencion" type="checkbox"> Completada</label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>Acción definitiva <button type="button" class="help" title="Medida que elimina la CAUSA RAÍZ para que no vuelva a ocurrir (ej.: estandarizar procedimiento, modificar especificación, contrato, proveedor, capacitación).">¿Qué es?</button></h3>
+            <label>Descripción</label>
+            <textarea id="accionDefinitiva"></textarea>
+            <div class="grid g3">
+              <div>
+                <label>Responsable</label>
+                <input id="respDefinitiva"/>
+              </div>
+              <div>
+                <label>Fecha compromiso</label>
+                <input id="fechaDefinitiva" type="date"/>
+              </div>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneDefinitiva" type="checkbox"> Completada</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Causa raíz y verificación</h3>
+        <div class="grid g3">
+          <div>
+            <label>Causa raíz (5-Why/Ishikawa)</label>
+            <input id="causaRaiz" placeholder="Enunciado concreto y verificable"/>
+          </div>
+          <div>
+            <label>Plan de verificación</label>
+            <input id="planVerif" placeholder="Cómo validar eficacia (métrica, muestreo, periodo)"/>
+          </div>
+          <div>
+            <label>Fecha verificación</label>
+            <input id="fechaVerif" type="date"/>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="row"><input id="actRiesgos" type="checkbox"> Actualiza la matriz de riesgos del SGC</label>
+          <label class="row"><input id="camProc" type="checkbox"> Requiere cambio de procedimiento/documento</label>
+        </div>
+
+        <!-- Checklist ISO esencial -->
+        <h3>Checklist ISO 9001 (mínimos)</h3>
+        <div class="grid g2" id="isoChecklist">
+          <label class="row"><input type="checkbox" data-iso="identificacion"> Identificación de la no conformidad</label>
+          <label class="row"><input type="checkbox" data-iso="contencion"> Control/contención inmediata</label>
+          <label class="row"><input type="checkbox" data-iso="causa"> Investigación y causa raíz</label>
+          <label class="row"><input type="checkbox" data-iso="accion"> Acción correctiva definida</label>
+          <label class="row"><input type="checkbox" data-iso="verificacion"> Verificación de eficacia</label>
+          <label class="row"><input type="checkbox" data-iso="riesgos"> Evaluación de riesgos/cambios</label>
+          <label class="row"><input type="checkbox" data-iso="trazabilidad"> Trazabilidad (ID, revisión, responsable, fechas)</label>
+          <label class="row"><input type="checkbox" data-iso="evidencias"> Evidencias adjuntas</label>
+        </div>
+
+        <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
+        <div class="uploader" id="dropZone">
+          <p>Arrastra archivos aquí o 
+            <label for="evidInput" class="select-trigger"><span class="kbd">Selecciona</span></label>
+          </p>
+          <input id="evidInput" type="file" accept="application/pdf,image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>
+        </div>
+        <div class="evidence-list" id="evidList"></div>
+
+        <div class="actions">
+          <button id="btnGuardar" class="ok">Guardar</button>
+          <button id="btnRevision" class="warn">Guardar como revisión +1</button>
+          <button id="btnEnviarRevision" class="review">Enviar a revisión (+1)</button>
+          <button id="btnCerrar" class="ghost">Marcar como cerrada</button>
+          <button id="btnNuevo" class="ghost">Limpiar formulario</button>
+          <span class="pill">ID fijo <span title="El ID no cambia entre revisiones">ⓘ</span> · <span>Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span></span>
+        </div>
+
+        <div class="actions" style="margin-top:6px">
+          <button id="btnPDF">Exportar PDF</button>
+          <button id="btnPDFVer" class="ghost">Ver PDF</button>
+          <button id="btnPDFShare" class="ghost">Compartir PDF</button>
+          <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
+          <button id="btnImport" class="ghost">Importar (.json)</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none" />
+          <span class="tag">El PDF incluye miniaturas de imágenes y páginas de PDFs adjuntos</span>
+        </div>
+      </section>
+
+      <!-- Listado -->
+      <section class="card" id="listCard">
+        <h2>CAPAs registradas</h2>
+        <div class="grid g3">
+          <div>
+            <label>Filtro estado</label>
+            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>En revisión</option><option>Cerrada</option></select>
+          </div>
+          <div>
+            <label>Filtro ¿Dónde?</label>
+            <select id="fDonde"><option value="">Todos</option><option>Campo</option><option>Transporte</option><option>Packing</option><option>Naviera</option><option>Documentación</option><option>Cliente</option><option>Otro</option></select>
+          </div>
+          <div>
+            <label>Buscar texto</label>
+            <input id="fTexto" placeholder="ID, proveedor, problema…"/>
+          </div>
+        </div>
+        <div style="overflow:auto;margin-top:8px">
+          <table id="tabla">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Rev</th>
+                <th>Estado</th>
+                <th>Detección</th>
+                <th>Semana</th>
+                <th>¿Dónde?</th>
+                <th>Gravedad</th>
+                <th>Prob.</th>
+                <th>Riesgo</th>
+                <th>8.7</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- Modal para vista previa de evidencias y PDF -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <div id="modalTitle" class="modal-title">Vista previa</div>
+        <button class="modal-close" id="modalClose">Cerrar</button>
+      </div>
+      <div class="modal-content" id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- Librerías por CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>if(window['pdfjsLib']){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';}</script>
+
+  <script>
+    // ========= Anti-duplicado =========
+    (function antiDup(){
+      window.addEventListener('DOMContentLoaded', ()=>{
+        const wraps = document.querySelectorAll('.wrap');
+        for(let i=1;i<wraps.length;i++) wraps[i].remove();
+        ['formCard','listCard'].forEach(id=>{ const nodes=document.querySelectorAll('#'+id); for(let i=1;i<nodes.length;i++) nodes[i].remove(); });
+      });
+    })();
+
+    // ========= Utilidades =========
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const DB = idbKeyval; // IndexedDB para evidencias (blobs)
+
+    const keySeq = () => `capa:seq:global`;
+    const nextId = () => { let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1; localStorage.setItem(keySeq(), String(seq)); return `CAPA-${String(seq).padStart(3,'0')}`; }
+
+    const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
+    const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
+    function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
+    function upsertCapa(obj){ const arr=readCapas(); const idx=arr.findIndex(x=>x.id===obj.id); if(idx>=0) arr[idx]=obj; else arr.unshift(obj); writeCapas(arr); renderTable(); }
+    function getCapa(id){ return readCapas().find(x=>x.id===id); }
+
+    // ========= Riesgo =========
+    const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
+    function calcRisk(gravedad, prob){ const s=sevToNum(gravedad); const p=parseInt(prob||1,10); const score=s*p; let level='Bajo', cls='r-low'; if(score>=4 && score<=6){level='Medio';cls='r-med';} if(score>=7 && score<=9){level='Alto';cls='r-high';} if(score>=10){level='Crítico';cls='r-crit';} return {score, level, cls}; }
+    function updateRiskPill(){ const g=$('#gravedad').value; const p=$('#probabilidad').value; const {score,level,cls}=calcRisk(g,p); const pill=$('#riesgoPill'); pill.className='risk '+cls; pill.textContent=`${level} · ${score}`; }
+
+    // ========= Estado del formulario =========
+    let currentEvidenceKeys = [];
+    let currentEditingId = null;
+
+    function fillWeekSelect(){ const s=$('#semanaSel'); s.innerHTML=''; for(let i=0;i<=52;i++){ const opt=document.createElement('option'); opt.value=String(i); opt.textContent=`S${String(i).padStart(2,'0')}`; s.appendChild(opt);} }
+    function setWeekSelect(n){ const s=$('#semanaSel'); if(n===''||n==null||Number.isNaN(n)) s.value='0'; else s.value=String(Math.max(0,Math.min(52,n))); }
+    function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
+
+    function getCtrl87(){ const el=document.querySelector('input[name="ctrl87"]:checked'); return el? el.value: ''; }
+    function setCtrl87(v){ const el=document.querySelector(`input[name="ctrl87"][value="${v||''}"]`); if(el) el.checked=true; }
+
+    function getISOChecklist(){ const o={}; $$('#isoChecklist [data-iso]').forEach(cb=>o[cb.dataset.iso]=cb.checked); return o; }
+    function setISOChecklist(o){ $$('#isoChecklist [data-iso]').forEach(cb=> cb.checked = !!(o && o[cb.dataset.iso])); }
+
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').checked=false; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').checked=false; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; $('#actRiesgos').checked=false; $('#camProc').checked=false; setCtrl87(''); setISOChecklist({}); currentEvidenceKeys=[]; renderEvidence(); }
+
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').checked = (obj.doneContencion===true || obj.doneContencion==='Sí'); $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').checked = (obj.doneDefinitiva===true || obj.doneDefinitiva==='Sí'); $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; $('#actRiesgos').checked=!!obj.actRiesgos; $('#camProc').checked=!!obj.camProc; setCtrl87(obj.control87||''); setISOChecklist(obj.isoChecklist||{}); currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
+
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), control87:getCtrl87(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').checked, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').checked, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, actRiesgos:$('#actRiesgos').checked, camProc:$('#camProc').checked, isoChecklist:getISOChecklist(), evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
+
+    $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
+
+    // ========= Tooltip accesible =========
+    let openTip=null; function setupHelpTips(){ $$('.help').forEach(el=>{ const t=el.getAttribute('title')||el.dataset.help; if(!t) return; el.dataset.help=t; el.removeAttribute('title'); el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0'); el.addEventListener('click',(e)=>{e.preventDefault(); e.stopPropagation(); toggleTip(el);}); el.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); toggleTip(el);} }); }); document.addEventListener('click', closeTip); window.addEventListener('resize', closeTip); window.addEventListener('scroll', closeTip, true);} function toggleTip(el){ if(openTip && openTip.anchor===el){ closeTip(); return;} closeTip(); const tip=document.createElement('div'); tip.className='tip'; tip.textContent=el.dataset.help; document.body.appendChild(tip); const r=el.getBoundingClientRect(); const top=r.bottom+window.scrollY+8; let left=r.left+window.scrollX; const pad=8; const maxLeft=window.scrollX+document.documentElement.clientWidth-tip.offsetWidth-pad; left=Math.min(Math.max(left,pad+window.scrollX),maxLeft); tip.style.top=top+'px'; tip.style.left=left+'px'; openTip={node:tip,anchor:el}; } function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
+
+    // ========= Evidencias =========
+    const drop=$('#dropZone'); const input=$('#evidInput');
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background='#0b1119';}); drop.addEventListener('dragleave', ()=>{ drop.style.background='#0e141d';}); drop.addEventListener('drop', async (e)=>{ e.preventDefault(); drop.style.background='#0e141d'; await addFiles(e.dataTransfer.files); })
+    input.addEventListener('change', async e=>{ await addFiles(e.target.files); input.value=''; });
+
+    async function addFiles(fileList){ for(const file of fileList){ if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue; let blob=file; if(file.type.startsWith('image/')){ try{ blob=await compressImage(file,1600,85); blob.name=file.name; }catch(_){}} const key=`ev:${crypto.randomUUID()}`; await DB.set(key, blob); currentEvidenceKeys.push(key);} renderEvidence(); }
+
+    async function compressImage(file, maxW=1600, quality=85){ const img=new Image(); const url=URL.createObjectURL(file); await new Promise(res=>{img.onload=()=>res(); img.src=url;}); const scale=Math.min(1, maxW/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); return await new Promise(res=> canvas.toBlob(res,'image/jpeg',quality/100)); }
+
+    async function renderEvidence(){ const cont=$('#evidList'); cont.innerHTML=''; for(const key of currentEvidenceKeys){ const blob=await DB.get(key); if(!blob) continue; const div=document.createElement('div'); div.className='ev'; const isImg=blob.type.startsWith('image/'); if(isImg){ const img=document.createElement('img'); img.className='thumb'; img.alt=''; img.src=URL.createObjectURL(blob); img.onclick=()=> previewBlob(blob,'Imagen'); div.appendChild(img);} else { const ph=document.createElement('div'); ph.className='thumb'; ph.style.display='grid'; ph.style.placeItems='center'; ph.innerHTML='<div class="tag">PDF</div>'; ph.onclick=()=> previewBlob(blob,'Documento PDF'); div.appendChild(ph);} const meta=document.createElement('div'); meta.className='meta'; const name=document.createElement('div'); name.className='name'; name.textContent=blob.name||(isImg?'Imagen':'Documento PDF'); const size=document.createElement('div'); size.className='size'; size.textContent=`${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`; const row=document.createElement('div'); row.className='actions'; const pv=document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa'; pv.onclick=()=> previewBlob(blob, name.textContent); const dl=document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar'; dl.onclick=()=> downloadBlob(blob,(blob.name||'evidencia')); const rm=document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar'; rm.onclick=async()=>{ await DB.del(key); currentEvidenceKeys=currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); }; row.append(pv,dl,rm); meta.append(name,size,row); div.appendChild(meta); cont.appendChild(div);} }
+
+    function previewBlob(blob, title='Vista previa'){ const url=URL.createObjectURL(blob); if(blob.type==='application/pdf' && isIOS){ window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); return; } const modal=$('#modal'); const content=$('#modalContent'); $('#modalTitle').textContent=title; content.innerHTML=''; if(blob.type.startsWith('image/')){ const img=document.createElement('img'); img.src=url; content.appendChild(img);} else if(blob.type==='application/pdf'){ const embed=document.createElement('embed'); embed.type='application/pdf'; embed.src=url+'#toolbar=1&navpanes=0&scrollbar=1'; content.appendChild(embed);} else { const a=document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);} modal.classList.add('open'); document.body.classList.add('modal-open'); }
+    $('#modalClose').addEventListener('click', closeModal); $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); }); function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
+
+    function downloadBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+    // ========= Tabla =========
+    function stateClass(s){ return s==='Abierta'?'s-open': s==='En contención'?'s-hold': s==='En curso'?'s-run': s==='En revisión'?'s-review':'s-done'; }
+    function riskClassFromLevel(level){ return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low'; }
+
+    function renderTable(){ const tbody=$('#tabla tbody'); const arr=readCapas(); const fE=$('#fEstado').value; const fD=$('#fDonde').value; const fT=($('#fTexto').value||'').toLowerCase(); tbody.innerHTML=''; for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){ const tr=document.createElement('tr'); const level=x.riesgoNivel||calcRisk(x.gravedad, x.probabilidad||1).level; const score=x.riesgoScore||calcRisk(x.gravedad, x.probabilidad||1).score; tr.innerHTML=`
+          <td><span class="kbd">${x.id}</span></td>
+          <td>${x.revision??0}</td>
+          <td><span class="state ${stateClass(x.estado)}">${x.estado}</span></td>
+          <td>${fmt(x.fechaDeteccion)}</td>
+          <td>${x.semana!=null?`S${String(x.semana).padStart(2,'0')}`:''}</td>
+          <td>${x.donde||''}</td>
+          <td>${x.gravedad||'Baja'}</td>
+          <td>${x.probabilidad||1}</td>
+          <td><span class="risk ${riskClassFromLevel(level)}">${level} · ${score}</span></td>
+          <td>${x.control87||''}</td>
+          <td>
+            <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
+            <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
+            <button class="danger" data-act="borrar" data-id="${x.id}">Borrar</button>
+          </td>`; tbody.appendChild(tr);} }
+
+    $('#tabla').addEventListener('click', async (e)=>{ const btn=e.target.closest('button'); if(!btn) return; const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const obj=getCapa(id); if(!obj) return; if(act==='editar'){ loadForm(obj);} if(act==='pdf'){ exportPDF(obj,{save:true}); } if(act==='borrar'){ if(confirm('¿Eliminar CAPA '+id+'?')){ const rest=readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable(); } } });
+
+    // ========= Guardado y flujos rápidos =========
+    $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
+    $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
+    $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
+    $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
+
+    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
+    $('#btnNuevo').addEventListener('click', ()=> clearForm());
+    $('#bigToggle').addEventListener('change', (e)=>{ document.body.classList.toggle('big', e.target.checked); localStorage.setItem('capa_ui_big', e.target.checked?'1':'0'); })
+
+    // ========= Filtros =========
+    $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
+
+    // ========= Backup/Import =========
+    $('#btnBackup').addEventListener('click', ()=>{ const data=readCapas(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); downloadBlob(blob,'capas_backup.json'); });
+    $('#btnImport').addEventListener('click', ()=> $('#importFile').click());
+    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); try{ const arr=JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔'); }catch(err){ alert('Archivo inválido'); }});
+
+    // ========= PDF =========
+    $('#btnPDF').addEventListener('click', async ()=>{ const obj=collectForm(); await exportPDF(obj,{save:true}); });
+    $('#btnPDFVer').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); if(isIOS){ const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000);} else { previewBlob(blob,name);} });
+    $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
+
+    async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14);
+      // Título y semana / riesgo a la derecha
+      pdf.text('ACONFEX · CAPA', margin, 38);
+      pdf.setFontSize(11); pdf.text((obj.semana!=null?`Semana S${String(obj.semana).padStart(2,'0')}`:''), 595-margin-160, 24);
+      pdf.text(`Riesgo: ${obj.riesgoNivel||''} (${obj.riesgoScore||''})`, 595-margin-160, 40);
+      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+
+      function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
+      function yesNo(v){ return v? 'Sí':'No'; }
+
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('¿Dónde?',obj.donde); row('Proveedor/Cliente',obj.tercero); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Control 8.7', obj.control87||'N/A');
+
+      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada', yesNo(obj.doneContencion));
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada', yesNo(obj.doneDefinitiva));
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
+Plan de verificación: ${obj.planVerif||''}
+Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Actualizaciones al SGC', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, `Actualiza matriz de riesgos: ${yesNo(obj.actRiesgos)}
+Cambio de procedimiento/documento: ${yesNo(obj.camProc)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Checklist ISO 9001 (mínimos)', margin, y); y+=14; pdf.setFont(undefined,'normal');
+      const iso=obj.isoChecklist||{}; const isoItems=[
+        ['Identificación', iso.identificacion], ['Contención', iso.contencion], ['Causa raíz', iso.causa], ['Acción correctiva', iso.accion], ['Verificación eficacia', iso.verificacion], ['Riesgos/cambios', iso.riesgos], ['Trazabilidad', iso.trazabilidad], ['Evidencias', iso.evidencias]
+      ];
+      for(const [k,v] of isoItems){ row(k, yesNo(!!v)); }
+
+      // Evidencias
+      const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
+      if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
+      const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
+      if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
+
+      const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
+    }
+
+    function writeMultiline(pdf, text, x, y, maxWidth){ const lines=pdf.splitTextToSize(String(text||''), maxWidth); for(const ln of lines){ pdf.text(ln, x, y); y+=16; } return y; }
+    function blobToDataURL(blob){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); }); }
+    function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
+
+    // ========= Init =========
+    fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
+    // Restaurar modo grande
+    const big = localStorage.getItem('capa_ui_big')==='1'; document.getElementById('bigToggle').checked=big; document.body.classList.toggle('big', big);
   </script>
 </body>
 </html>
