@@ -83,7 +83,18 @@
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0e141d;border:var(--bd);border-radius:6px;padding:2px 6px}
 
     /* Tooltip accesible (click/touch) */
-    .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:99999}
+    .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:10001}
+
+    /* ================= Modal centrado fijo ================= */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10000}
+    .modal.open{display:flex}
+    body.modal-open{overflow:hidden}
+    .modal-inner{background:var(--panel);border:var(--bd);border-radius:14px;width:min(96vw,980px);max-height:92vh;display:flex;flex-direction:column}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:var(--bd)}
+    .modal-title{font-weight:600}
+    .modal-close{background:transparent;border:var(--bd);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+    .modal-content{padding:10px;overflow:auto}
+    .modal-content embed,.modal-content img{width:100%;height:76vh;object-fit:contain}
   </style>
 </head>
 <body>
@@ -274,7 +285,7 @@
           <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
           <button id="btnImport" class="ghost">Importar (.json)</button>
           <input id="importFile" type="file" accept="application/json" style="display:none" />
-          <span class="tag">El PDF incluye miniaturas de imágenes y listado de PDFs</span>
+          <span class="tag">El PDF incluye miniaturas de imágenes y **páginas de PDFs adjuntos**</span>
         </div>
       </section>
 
@@ -332,13 +343,21 @@
     </div>
   </div>
 
-  <!-- Librerías livianas por CDN -->
+  <!-- Librerías por CDN -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- PDF.js para dibujar páginas de PDFs de evidencia al final del reporte -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    // worker de pdf.js
+    if(window['pdfjsLib']){
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
 
   <script>
-    // ========= Anti-duplicado: elimina copias si pegaste el archivo dos veces =========
+    // ========= Anti-duplicado =========
     (function antiDup(){
       window.addEventListener('DOMContentLoaded', ()=>{
         const wraps = document.querySelectorAll('.wrap');
@@ -364,9 +383,7 @@
     }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
-    const bytes = n => {
-      if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1).toString()+" MB";
-    }
+    const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
@@ -427,7 +444,7 @@
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      setWeekSelect(0); // ahora SEMANA es manual, no autocalculada
+      setWeekSelect(0); // semana manual
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
@@ -653,16 +670,17 @@
         const embed = document.createElement('embed');
         embed.type = 'application/pdf';
         embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
-        embed.style.width = '80vw'; embed.style.maxWidth = '900px'; embed.style.height = '70vh';
         content.appendChild(embed);
       } else {
         const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
       }
       modal.classList.add('open');
+      document.body.classList.add('modal-open');
     }
 
-    $('#modalClose').addEventListener('click', ()=> $('#modal').classList.remove('open'));
-    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') $('#modal').classList.remove('open'); });
+    $('#modalClose').addEventListener('click', closeModal);
+    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
+    function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
 
     function downloadBlob(blob, name){
       const a = document.createElement('a');
@@ -829,7 +847,9 @@
 
       if(y>700){ pdf.addPage(); y = margin; }
       pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}\nPlan de verificación: ${obj.planVerif||''}\nFecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
+Plan de verificación: ${obj.planVerif||''}
+Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
@@ -844,6 +864,7 @@
         pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
       }
 
+      // grid 2xN de imágenes
       const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
       for(const imgBlob of imgs){
         const dataUrl = await blobToDataURL(imgBlob);
@@ -859,14 +880,39 @@
       }
       if(col!==0){ y += boxH + gap; }
 
-      if(pdfs.length){
-        if(y>740){ pdf.addPage(); y = margin; }
-        pdf.setFont(undefined,'bold'); pdf.text('Documentos PDF (no embebidos):', margin, y); y+=16; pdf.setFont(undefined,'normal');
-        pdf.setFontSize(11);
-        for(const b of pdfs){
-          pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, y);
-          y+=14; if(y>780){ pdf.addPage(); y = margin; }
+      // Agregar páginas de PDFs de evidencia renderizadas con pdf.js
+      if(pdfs.length && window['pdfjsLib']){
+        for(const pblob of pdfs){
+          try{
+            const ab = await pblob.arrayBuffer();
+            const doc = await pdfjsLib.getDocument({data: ab}).promise;
+            const total = doc.numPages;
+            for(let i=1;i<=total;i++){
+              const page = await doc.getPage(i);
+              const viewport = page.getViewport({scale:1});
+              // Escala para caber dentro de A4 (595x842 pt) con márgenes
+              const maxW = 595 - margin*2;
+              const scale = maxW / viewport.width;
+              const v2 = page.getViewport({scale});
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.ceil(v2.width); canvas.height = Math.ceil(v2.height);
+              const ctx = canvas.getContext('2d');
+              await page.render({canvasContext: ctx, viewport: v2}).promise;
+              const dataUrl = canvas.toDataURL('image/png');
+              pdf.addPage();
+              pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10);
+              pdf.addImage(dataUrl, 'PNG', margin, margin, v2.width, v2.height);
+            }
+          }catch(err){
+            pdf.addPage();
+            pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin);
+          }
         }
+      } else if(pdfs.length){
+        pdf.addPage();
+        pdf.text('PDFs adjuntos (no embebidos):', margin, margin);
+        let yy = margin+18; pdf.setFontSize(11);
+        for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; }
         pdf.setFontSize(12);
       }
 
@@ -896,7 +942,8 @@
     setupHelpTips();
   </script>
 </body>
-</html><!DOCTYPE html>
+</html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -981,7 +1028,18 @@
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0e141d;border:var(--bd);border-radius:6px;padding:2px 6px}
 
     /* Tooltip accesible (click/touch) */
-    .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:99999}
+    .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:10001}
+
+    /* ================= Modal centrado fijo ================= */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10000}
+    .modal.open{display:flex}
+    body.modal-open{overflow:hidden}
+    .modal-inner{background:var(--panel);border:var(--bd);border-radius:14px;width:min(96vw,980px);max-height:92vh;display:flex;flex-direction:column}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:var(--bd)}
+    .modal-title{font-weight:600}
+    .modal-close{background:transparent;border:var(--bd);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+    .modal-content{padding:10px;overflow:auto}
+    .modal-content embed,.modal-content img{width:100%;height:76vh;object-fit:contain}
   </style>
 </head>
 <body>
@@ -1172,7 +1230,7 @@
           <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
           <button id="btnImport" class="ghost">Importar (.json)</button>
           <input id="importFile" type="file" accept="application/json" style="display:none" />
-          <span class="tag">El PDF incluye miniaturas de imágenes y listado de PDFs</span>
+          <span class="tag">El PDF incluye miniaturas de imágenes y **páginas de PDFs adjuntos**</span>
         </div>
       </section>
 
@@ -1230,13 +1288,21 @@
     </div>
   </div>
 
-  <!-- Librerías livianas por CDN -->
+  <!-- Librerías por CDN -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- PDF.js para dibujar páginas de PDFs de evidencia al final del reporte -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    // worker de pdf.js
+    if(window['pdfjsLib']){
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
 
   <script>
-    // ========= Anti-duplicado: elimina copias si pegaste el archivo dos veces =========
+    // ========= Anti-duplicado =========
     (function antiDup(){
       window.addEventListener('DOMContentLoaded', ()=>{
         const wraps = document.querySelectorAll('.wrap');
@@ -1262,9 +1328,7 @@
     }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
-    const bytes = n => {
-      if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1).toString()+" MB";
-    }
+    const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
@@ -1325,7 +1389,7 @@
       $('#capaEstado').value = 'Abierta';
       $('#fechaDeteccion').value = '';
       $('#fechaCierre').value = '';
-      setWeekSelect(0); // ahora SEMANA es manual, no autocalculada
+      setWeekSelect(0); // semana manual
       $('#donde').value = 'Campo';
       $('#tercero').value = '';
       $('#gravedad').value = 'Baja';
@@ -1551,16 +1615,17 @@
         const embed = document.createElement('embed');
         embed.type = 'application/pdf';
         embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
-        embed.style.width = '80vw'; embed.style.maxWidth = '900px'; embed.style.height = '70vh';
         content.appendChild(embed);
       } else {
         const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
       }
       modal.classList.add('open');
+      document.body.classList.add('modal-open');
     }
 
-    $('#modalClose').addEventListener('click', ()=> $('#modal').classList.remove('open'));
-    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') $('#modal').classList.remove('open'); });
+    $('#modalClose').addEventListener('click', closeModal);
+    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
+    function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
 
     function downloadBlob(blob, name){
       const a = document.createElement('a');
@@ -1727,7 +1792,9 @@
 
       if(y>700){ pdf.addPage(); y = margin; }
       pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}\nPlan de verificación: ${obj.planVerif||''}\nFecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
+Plan de verificación: ${obj.planVerif||''}
+Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
       // Evidencias
       const imgs = []; const pdfs = [];
@@ -1742,6 +1809,7 @@
         pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
       }
 
+      // grid 2xN de imágenes
       const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
       for(const imgBlob of imgs){
         const dataUrl = await blobToDataURL(imgBlob);
@@ -1757,14 +1825,39 @@
       }
       if(col!==0){ y += boxH + gap; }
 
-      if(pdfs.length){
-        if(y>740){ pdf.addPage(); y = margin; }
-        pdf.setFont(undefined,'bold'); pdf.text('Documentos PDF (no embebidos):', margin, y); y+=16; pdf.setFont(undefined,'normal');
-        pdf.setFontSize(11);
-        for(const b of pdfs){
-          pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, y);
-          y+=14; if(y>780){ pdf.addPage(); y = margin; }
+      // Agregar páginas de PDFs de evidencia renderizadas con pdf.js
+      if(pdfs.length && window['pdfjsLib']){
+        for(const pblob of pdfs){
+          try{
+            const ab = await pblob.arrayBuffer();
+            const doc = await pdfjsLib.getDocument({data: ab}).promise;
+            const total = doc.numPages;
+            for(let i=1;i<=total;i++){
+              const page = await doc.getPage(i);
+              const viewport = page.getViewport({scale:1});
+              // Escala para caber dentro de A4 (595x842 pt) con márgenes
+              const maxW = 595 - margin*2;
+              const scale = maxW / viewport.width;
+              const v2 = page.getViewport({scale});
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.ceil(v2.width); canvas.height = Math.ceil(v2.height);
+              const ctx = canvas.getContext('2d');
+              await page.render({canvasContext: ctx, viewport: v2}).promise;
+              const dataUrl = canvas.toDataURL('image/png');
+              pdf.addPage();
+              pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10);
+              pdf.addImage(dataUrl, 'PNG', margin, margin, v2.width, v2.height);
+            }
+          }catch(err){
+            pdf.addPage();
+            pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin);
+          }
         }
+      } else if(pdfs.length){
+        pdf.addPage();
+        pdf.text('PDFs adjuntos (no embebidos):', margin, margin);
+        let yy = margin+18; pdf.setFontSize(11);
+        for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; }
         pdf.setFontSize(12);
       }
 
