@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="apple-touch-icon" sizes="180x180" href="capa (2).jpg?v=1">
-
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA para operaciones de exportación. Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
+  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -33,7 +32,7 @@
       button{width:100%}
     }
 
-    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px}
+    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px;scroll-margin-top:16px}
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
@@ -51,6 +50,7 @@
     .danger{background:var(--danger)}
     .ok{background:var(--ok)}
     .warn{background:var(--warn)}
+    .review{background:var(--purple)}
     button:disabled{opacity:.55;cursor:not-allowed}
 
     table{width:100%;border-collapse:collapse}
@@ -70,6 +70,7 @@
     .s-open{background:rgba(255,93,108,.12)}
     .s-run{background:rgba(42,140,255,.12)}
     .s-hold{background:rgba(255,176,32,.12)}
+    .s-review{background:rgba(167,139,250,.18)}
     .s-done{background:rgba(41,192,114,.12)}
 
     .risk{font-size:11px;padding:4px 8px;border-radius:999px;border:var(--bd);display:inline-block}
@@ -87,7 +88,7 @@
     /* Tooltip accesible (click/touch) */
     .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:10001}
 
-    /* ================= Modal centrado fijo ================= */
+    /* Modal centrado fijo */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10000}
     .modal.open{display:flex}
     body.modal-open{overflow:hidden}
@@ -97,6 +98,10 @@
     .modal-close{background:transparent;border:var(--bd);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
     .modal-content{padding:10px;overflow:auto}
     .modal-content embed,.modal-content img{width:100%;height:76vh;object-fit:contain}
+
+    /* Resalte al cargar en edición */
+    .pulse{animation:pulse 1.2s ease-out 2}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(42,140,255,.6)}100%{box-shadow:0 0 0 16px rgba(42,140,255,0)}}
   </style>
 </head>
 <body>
@@ -128,6 +133,7 @@
               <option>Abierta</option>
               <option>En contención</option>
               <option>En curso</option>
+              <option>En revisión</option>
               <option>Cerrada</option>
             </select>
           </div>
@@ -276,6 +282,8 @@
         <div class="actions">
           <button id="btnGuardar" class="ok">Guardar</button>
           <button id="btnRevision" class="warn">Guardar como revisión +1</button>
+          <button id="btnEnviarRevision" class="review">Enviar a revisión (+1)</button>
+          <button id="btnCerrar" class="ghost">Marcar como cerrada</button>
           <button id="btnNuevo" class="ghost">Limpiar formulario</button>
           <span class="pill">ID fijo <span title="El ID no cambia entre revisiones">ⓘ</span> · <span>Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span></span>
         </div>
@@ -287,7 +295,7 @@
           <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
           <button id="btnImport" class="ghost">Importar (.json)</button>
           <input id="importFile" type="file" accept="application/json" style="display:none" />
-          <span class="tag">El PDF incluye miniaturas de imágenes y **páginas de PDFs adjuntos**</span>
+          <span class="tag">El PDF incluye miniaturas de imágenes y páginas de PDFs adjuntos</span>
         </div>
       </section>
 
@@ -297,7 +305,7 @@
         <div class="grid g3">
           <div>
             <label>Filtro estado</label>
-            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>Cerrada</option></select>
+            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>En revisión</option><option>Cerrada</option></select>
           </div>
           <div>
             <label>Filtro ¿Dónde?</label>
@@ -349,14 +357,8 @@
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <!-- PDF.js para dibujar páginas de PDFs de evidencia al final del reporte -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script>
-    // worker de pdf.js
-    if(window['pdfjsLib']){
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-    }
-  </script>
+  <script>if(window['pdfjsLib']){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';}</script>
 
   <script>
     // ========= Anti-duplicado =========
@@ -364,352 +366,77 @@
       window.addEventListener('DOMContentLoaded', ()=>{
         const wraps = document.querySelectorAll('.wrap');
         for(let i=1;i<wraps.length;i++) wraps[i].remove();
-        ['formCard','listCard'].forEach(id=>{
-          const nodes = document.querySelectorAll('#'+id);
-          for(let i=1;i<nodes.length;i++) nodes[i].remove();
-        });
+        ['formCard','listCard'].forEach(id=>{ const nodes=document.querySelectorAll('#'+id); for(let i=1;i<nodes.length;i++) nodes[i].remove(); });
       });
     })();
 
     // ========= Utilidades =========
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
-
     const DB = idbKeyval; // IndexedDB para evidencias (blobs)
 
     const keySeq = () => `capa:seq:global`;
-    const nextId = () => {
-      let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1;
-      localStorage.setItem(keySeq(), String(seq));
-      return `CAPA-${String(seq).padStart(3,'0')}`;
-    }
+    const nextId = () => { let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1; localStorage.setItem(keySeq(), String(seq)); return `CAPA-${String(seq).padStart(3,'0')}`; }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
     const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
-
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
     function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
-    function upsertCapa(obj){
-      const arr = readCapas();
-      const idx = arr.findIndex(x=>x.id===obj.id);
-      if(idx>=0) arr[idx]=obj; else arr.unshift(obj);
-      writeCapas(arr);
-      renderTable();
-    }
-
+    function upsertCapa(obj){ const arr=readCapas(); const idx=arr.findIndex(x=>x.id===obj.id); if(idx>=0) arr[idx]=obj; else arr.unshift(obj); writeCapas(arr); renderTable(); }
     function getCapa(id){ return readCapas().find(x=>x.id===id); }
 
     // ========= Riesgo =========
     const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
-    function calcRisk(gravedad, prob){
-      const s = sevToNum(gravedad); const p = parseInt(prob||1,10);
-      const score = s*p;
-      let level = 'Bajo', cls = 'r-low';
-      if(score>=4 && score<=6){ level='Medio'; cls='r-med'; }
-      if(score>=7 && score<=9){ level='Alto'; cls='r-high'; }
-      if(score>=10){ level='Crítico'; cls='r-crit'; }
-      return {score, level, cls};
-    }
-
-    function updateRiskPill(){
-      const g = $('#gravedad').value; const p = $('#probabilidad').value;
-      const {score, level, cls} = calcRisk(g,p);
-      const pill = $('#riesgoPill');
-      pill.className = 'risk ' + cls;
-      pill.textContent = `${level} · ${score}`;
-    }
+    function calcRisk(gravedad, prob){ const s=sevToNum(gravedad); const p=parseInt(prob||1,10); const score=s*p; let level='Bajo', cls='r-low'; if(score>=4 && score<=6){level='Medio';cls='r-med';} if(score>=7 && score<=9){level='Alto';cls='r-high';} if(score>=10){level='Crítico';cls='r-crit';} return {score, level, cls}; }
+    function updateRiskPill(){ const g=$('#gravedad').value; const p=$('#probabilidad').value; const {score,level,cls}=calcRisk(g,p); const pill=$('#riesgoPill'); pill.className='risk '+cls; pill.textContent=`${level} · ${score}`; }
 
     // ========= Estado del formulario =========
     let currentEvidenceKeys = [];
+    let currentEditingId = null;
 
-    function fillWeekSelect(){
-      const s = $('#semanaSel'); s.innerHTML='';
-      for(let i=0;i<=52;i++){
-        const opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = `S${String(i).padStart(2,'0')}`;
-        s.appendChild(opt);
-      }
-    }
-    function setWeekSelect(n){
-      const s = $('#semanaSel');
-      if(n==='' || n==null || Number.isNaN(n)) s.value = '0'; else s.value = String(Math.max(0,Math.min(52, n)));
-    }
+    function fillWeekSelect(){ const s=$('#semanaSel'); s.innerHTML=''; for(let i=0;i<=52;i++){ const opt=document.createElement('option'); opt.value=String(i); opt.textContent=`S${String(i).padStart(2,'0')}`; s.appendChild(opt);} }
+    function setWeekSelect(n){ const s=$('#semanaSel'); if(n===''||n==null||Number.isNaN(n)) s.value='0'; else s.value=String(Math.max(0,Math.min(52,n))); }
     function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
-    function clearForm(){
-      $('#capaId').value = '';
-      $('#capaRev').value = 0;
-      $('#revQuick').value = 0;
-      $('#capaEstado').value = 'Abierta';
-      $('#fechaDeteccion').value = '';
-      $('#fechaCierre').value = '';
-      setWeekSelect(0); // semana manual
-      $('#donde').value = 'Campo';
-      $('#tercero').value = '';
-      $('#gravedad').value = 'Baja';
-      $('#probabilidad').value = '1';
-      updateRiskPill();
-      $('#reporta').value = '';
-      $('#desc').value = '';
-      $('#accionContencion').value = '';
-      $('#respContencion').value = '';
-      $('#fechaContencion').value = '';
-      $('#doneContencion').value = 'No';
-      $('#accionDefinitiva').value = '';
-      $('#respDefinitiva').value = '';
-      $('#fechaDefinitiva').value = '';
-      $('#doneDefinitiva').value = 'No';
-      $('#causaRaiz').value = '';
-      $('#planVerif').value = '';
-      $('#fechaVerif').value = '';
-      currentEvidenceKeys = [];
-      renderEvidence();
-    }
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').value='No'; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').value='No'; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; currentEvidenceKeys=[]; renderEvidence(); }
 
-    function loadForm(obj){
-      $('#capaId').value = obj.id;
-      $('#capaRev').value = obj.revision||0;
-      $('#revQuick').value = obj.revision||0;
-      $('#capaEstado').value = obj.estado||'Abierta';
-      $('#fechaDeteccion').value = obj.fechaDeteccion||'';
-      $('#fechaCierre').value = obj.fechaCierre||'';
-      setWeekSelect(typeof obj.semana==='number'? obj.semana : 0); // sin autocalcular
-      $('#donde').value = obj.donde||'Campo';
-      $('#tercero').value = obj.tercero||'';
-      $('#gravedad').value = obj.gravedad||'Baja';
-      $('#probabilidad').value = String(obj.probabilidad||1);
-      updateRiskPill();
-      $('#reporta').value = obj.reporta||'';
-      $('#desc').value = obj.desc||'';
-      $('#accionContencion').value = obj.accionContencion||'';
-      $('#respContencion').value = obj.respContencion||'';
-      $('#fechaContencion').value = obj.fechaContencion||'';
-      $('#doneContencion').value = obj.doneContencion||'No';
-      $('#accionDefinitiva').value = obj.accionDefinitiva||'';
-      $('#respDefinitiva').value = obj.respDefinitiva||'';
-      $('#fechaDefinitiva').value = obj.fechaDefinitiva||'';
-      $('#doneDefinitiva').value = obj.doneDefinitiva||'No';
-      $('#causaRaiz').value = obj.causaRaiz||'';
-      $('#planVerif').value = obj.planVerif||'';
-      $('#fechaVerif').value = obj.fechaVerif||'';
-      currentEvidenceKeys = Array.isArray(obj.evidenceKeys)? [...obj.evidenceKeys] : [];
-      renderEvidence();
-    }
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').value=obj.doneContencion||'No'; $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').value=obj.doneDefinitiva||'No'; $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
 
-    function collectForm(){
-      const id = $('#capaId').value || nextId();
-      const g = $('#gravedad').value; const p = $('#probabilidad').value;
-      const risk = calcRisk(g,p);
-      const obj = {
-        id,
-        revision: parseInt($('#capaRev').value||'0',10),
-        estado: $('#capaEstado').value,
-        fechaDeteccion: $('#fechaDeteccion').value,
-        fechaCierre: $('#fechaCierre').value,
-        semana: getWeekNumber(),
-        donde: $('#donde').value,
-        tercero: $('#tercero').value.trim(),
-        gravedad: g,
-        probabilidad: parseInt(p,10),
-        riesgoScore: risk.score,
-        riesgoNivel: risk.level,
-        reporta: $('#reporta').value.trim(),
-        desc: $('#desc').value.trim(),
-        accionContencion: $('#accionContencion').value.trim(),
-        respContencion: $('#respContencion').value.trim(),
-        fechaContencion: $('#fechaContencion').value,
-        doneContencion: $('#doneContencion').value,
-        accionDefinitiva: $('#accionDefinitiva').value.trim(),
-        respDefinitiva: $('#respDefinitiva').value.trim(),
-        fechaDefinitiva: $('#fechaDefinitiva').value,
-        doneDefinitiva: $('#doneDefinitiva').value,
-        causaRaiz: $('#causaRaiz').value.trim(),
-        planVerif: $('#planVerif').value.trim(),
-        fechaVerif: $('#fechaVerif').value,
-        evidenceKeys: [...currentEvidenceKeys],
-        updatedAt: new Date().toISOString()
-      };
-      return obj;
-    }
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').value, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').value, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
 
-    // Eventos de riesgo manual
-    $('#gravedad').addEventListener('change', updateRiskPill);
-    $('#probabilidad').addEventListener('change', updateRiskPill);
+    $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
 
     // ========= Tooltip accesible =========
-    let openTip = null;
-    function setupHelpTips(){
-      $$('.help').forEach(el=>{
-        const t = el.getAttribute('title') || el.dataset.help; if(!t) return;
-        el.dataset.help = t; el.removeAttribute('title');
-        el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0');
-        el.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); toggleTip(el); });
-        el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleTip(el); } });
-      });
-      document.addEventListener('click', closeTip);
-      window.addEventListener('resize', closeTip);
-      window.addEventListener('scroll', closeTip, true);
-    }
-    function toggleTip(el){
-      if(openTip && openTip.anchor===el){ closeTip(); return; }
-      closeTip();
-      const tip = document.createElement('div'); tip.className='tip'; tip.textContent = el.dataset.help;
-      document.body.appendChild(tip);
-      const r = el.getBoundingClientRect();
-      const top = r.bottom + window.scrollY + 8;
-      let left = r.left + window.scrollX;
-      const pad = 8;
-      const maxLeft = window.scrollX + document.documentElement.clientWidth - tip.offsetWidth - pad;
-      left = Math.min(Math.max(left, pad + window.scrollX), maxLeft);
-      tip.style.top = top+'px'; tip.style.left = left+'px';
-      openTip = {node: tip, anchor: el};
-    }
-    function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
+    let openTip=null; function setupHelpTips(){ $$('.help').forEach(el=>{ const t=el.getAttribute('title')||el.dataset.help; if(!t) return; el.dataset.help=t; el.removeAttribute('title'); el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0'); el.addEventListener('click',(e)=>{e.preventDefault(); e.stopPropagation(); toggleTip(el);}); el.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); toggleTip(el);} }); }); document.addEventListener('click', closeTip); window.addEventListener('resize', closeTip); window.addEventListener('scroll', closeTip, true);} function toggleTip(el){ if(openTip && openTip.anchor===el){ closeTip(); return;} closeTip(); const tip=document.createElement('div'); tip.className='tip'; tip.textContent=el.dataset.help; document.body.appendChild(tip); const r=el.getBoundingClientRect(); const top=r.bottom+window.scrollY+8; let left=r.left+window.scrollX; const pad=8; const maxLeft=window.scrollX+document.documentElement.clientWidth-tip.offsetWidth-pad; left=Math.min(Math.max(left,pad+window.scrollX),maxLeft); tip.style.top=top+'px'; tip.style.left=left+'px'; openTip={node:tip,anchor:el}; } function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
 
     // ========= Evidencias =========
-    const drop = $('#dropZone');
-    const input = $('#evidInput');
+    const drop=$('#dropZone'); const input=$('#evidInput');
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background='#0b1119';}); drop.addEventListener('dragleave', ()=>{ drop.style.background='#0e141d';}); drop.addEventListener('drop', async (e)=>{ e.preventDefault(); drop.style.background='#0e141d'; await addFiles(e.dataTransfer.files); })
+    input.addEventListener('change', async e=>{ await addFiles(e.target.files); input.value=''; });
 
-    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background = '#0b1119';})
-    drop.addEventListener('dragleave', ()=>{ drop.style.background = '#0e141d';})
-    drop.addEventListener('drop', async (e)=>{
-      e.preventDefault(); drop.style.background = '#0e141d';
-      await addFiles(e.dataTransfer.files);
-    })
-    input.addEventListener('change', async e=>{
-      await addFiles(e.target.files);
-      input.value = '';
-    });
+    async function addFiles(fileList){ for(const file of fileList){ if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue; let blob=file; if(file.type.startsWith('image/')){ try{ blob=await compressImage(file,1600,85); blob.name=file.name; }catch(_){}} const key=`ev:${crypto.randomUUID()}`; await DB.set(key, blob); currentEvidenceKeys.push(key);} renderEvidence(); }
 
-    async function addFiles(fileList){
-      for(const file of fileList){
-        if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue;
-        let blob = file;
-        if(file.type.startsWith('image/')){
-          try{ blob = await compressImage(file, 1600, 85); blob.name = file.name; }
-          catch(_){ /* si no se pudo comprimir, usamos el original */ }
-        }
-        const key = `ev:${crypto.randomUUID()}`;
-        await DB.set(key, blob);
-        currentEvidenceKeys.push(key);
-      }
-      renderEvidence();
-    }
+    async function compressImage(file, maxW=1600, quality=85){ const img=new Image(); const url=URL.createObjectURL(file); await new Promise(res=>{img.onload=()=>res(); img.src=url;}); const scale=Math.min(1, maxW/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); return await new Promise(res=> canvas.toBlob(res,'image/jpeg',quality/100)); }
 
-    async function compressImage(file, maxW=1600, quality=85){
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      await new Promise(res=>{ img.onload=()=>res(); img.src=url; });
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      return await new Promise(res=> canvas.toBlob(res, 'image/jpeg', quality/100));
-    }
+    async function renderEvidence(){ const cont=$('#evidList'); cont.innerHTML=''; for(const key of currentEvidenceKeys){ const blob=await DB.get(key); if(!blob) continue; const div=document.createElement('div'); div.className='ev'; const isImg=blob.type.startsWith('image/'); if(isImg){ const img=document.createElement('img'); img.className='thumb'; img.alt=''; img.src=URL.createObjectURL(blob); img.onclick=()=> previewBlob(blob,'Imagen'); div.appendChild(img);} else { const ph=document.createElement('div'); ph.className='thumb'; ph.style.display='grid'; ph.style.placeItems='center'; ph.innerHTML='<div class="tag">PDF</div>'; ph.onclick=()=> previewBlob(blob,'Documento PDF'); div.appendChild(ph);} const meta=document.createElement('div'); meta.className='meta'; const name=document.createElement('div'); name.className='name'; name.textContent=blob.name||(isImg?'Imagen':'Documento PDF'); const size=document.createElement('div'); size.className='size'; size.textContent=`${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`; const row=document.createElement('div'); row.className='actions'; const pv=document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa'; pv.onclick=()=> previewBlob(blob, name.textContent); const dl=document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar'; dl.onclick=()=> downloadBlob(blob,(blob.name||'evidencia')); const rm=document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar'; rm.onclick=async()=>{ await DB.del(key); currentEvidenceKeys=currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); }; row.append(pv,dl,rm); meta.append(name,size,row); div.appendChild(meta); cont.appendChild(div);} }
 
-    async function renderEvidence(){
-      const cont = $('#evidList');
-      cont.innerHTML = '';
-      for(const key of currentEvidenceKeys){
-        const blob = await DB.get(key);
-        if(!blob) continue;
-        const div = document.createElement('div');
-        div.className = 'ev';
-        const isImg = blob.type.startsWith('image/');
-        if(isImg){
-          const img = document.createElement('img');
-          img.className = 'thumb'; img.alt='';
-          img.src = URL.createObjectURL(blob);
-          img.onclick = ()=> previewBlob(blob, 'Imagen');
-          div.appendChild(img);
-        } else {
-          const ph = document.createElement('div');
-          ph.className='thumb';
-          ph.style.display='grid'; ph.style.placeItems='center';
-          ph.innerHTML = '<div class="tag">PDF</div>';
-          ph.onclick = ()=> previewBlob(blob, 'Documento PDF');
-          div.appendChild(ph);
-        }
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = blob.name || (isImg? 'Imagen' : 'Documento PDF');
-        const size = document.createElement('div'); size.className='size'; size.textContent = `${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`;
-        const row = document.createElement('div'); row.className='actions';
-        const pv = document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa';
-        pv.onclick = ()=> previewBlob(blob, name.textContent);
-        const dl = document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar';
-        dl.onclick = ()=> downloadBlob(blob, (blob.name||'evidencia'));
-        const rm = document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar';
-        rm.onclick = async ()=>{ await DB.del(key); currentEvidenceKeys = currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); };
-        row.append(pv, dl, rm);
-        meta.append(name,size,row);
-        div.appendChild(meta);
-        cont.appendChild(div);
-      }
-    }
+    function previewBlob(blob, title='Vista previa'){ const url=URL.createObjectURL(blob); if(blob.type==='application/pdf' && isIOS){ window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); return; } const modal=$('#modal'); const content=$('#modalContent'); $('#modalTitle').textContent=title; content.innerHTML=''; if(blob.type.startsWith('image/')){ const img=document.createElement('img'); img.src=url; content.appendChild(img);} else if(blob.type==='application/pdf'){ const embed=document.createElement('embed'); embed.type='application/pdf'; embed.src=url+'#toolbar=1&navpanes=0&scrollbar=1'; content.appendChild(embed);} else { const a=document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);} modal.classList.add('open'); document.body.classList.add('modal-open'); }
+    $('#modalClose').addEventListener('click', closeModal); $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); }); function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
 
-    function previewBlob(blob, title='Vista previa'){
-      const url = URL.createObjectURL(blob);
-      if(blob.type==='application/pdf' && isIOS){
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-        return;
-      }
-      const modal = $('#modal');
-      const content = $('#modalContent');
-      $('#modalTitle').textContent = title;
-      content.innerHTML = '';
-      if(blob.type.startsWith('image/')){
-        const img = document.createElement('img'); img.src = url; content.appendChild(img);
-      } else if(blob.type==='application/pdf'){
-        const embed = document.createElement('embed');
-        embed.type = 'application/pdf';
-        embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
-        content.appendChild(embed);
-      } else {
-        const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
-      }
-      modal.classList.add('open');
-      document.body.classList.add('modal-open');
-    }
-
-    $('#modalClose').addEventListener('click', closeModal);
-    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
-    function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
-
-    function downloadBlob(blob, name){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    }
+    function downloadBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 
     // ========= Tabla =========
-    function riskClassFromLevel(level){
-      return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low';
-    }
+    function stateClass(s){ return s==='Abierta'?'s-open': s==='En contención'?'s-hold': s==='En curso'?'s-run': s==='En revisión'?'s-review':'s-done'; }
+    function riskClassFromLevel(level){ return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low'; }
 
-    function renderTable(){
-      const tbody = $('#tabla tbody');
-      const arr = readCapas();
-      const fE = $('#fEstado').value; const fD = $('#fDonde').value; const fT = ($('#fTexto').value||'').toLowerCase();
-      tbody.innerHTML='';
-      for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
-        const tr = document.createElement('tr');
-        const level = x.riesgoNivel || calcRisk(x.gravedad, x.probabilidad||1).level;
-        const score = x.riesgoScore || calcRisk(x.gravedad, x.probabilidad||1).score;
-        tr.innerHTML = `
+    function renderTable(){ const tbody=$('#tabla tbody'); const arr=readCapas(); const fE=$('#fEstado').value; const fD=$('#fDonde').value; const fT=($('#fTexto').value||'').toLowerCase(); tbody.innerHTML=''; for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){ const tr=document.createElement('tr'); const level=x.riesgoNivel||calcRisk(x.gravedad, x.probabilidad||1).level; const score=x.riesgoScore||calcRisk(x.gravedad, x.probabilidad||1).score; tr.innerHTML=`
           <td><span class="kbd">${x.id}</span></td>
           <td>${x.revision??0}</td>
-          <td><span class="state ${x.estado==='Abierta'?'s-open':x.estado==='En contención'?'s-hold':x.estado==='En curso'?'s-run':'s-done'}">${x.estado}</span></td>
+          <td><span class="state ${stateClass(x.estado)}">${x.estado}</span></td>
           <td>${fmt(x.fechaDeteccion)}</td>
-          <td>${x.semana!=null ? `S${String(x.semana).padStart(2,'0')}` : ''}</td>
+          <td>${x.semana!=null?`S${String(x.semana).padStart(2,'0')}`:''}</td>
           <td>${x.donde||''}</td>
           <td>${x.gravedad||'Baja'}</td>
           <td>${x.probabilidad||1}</td>
@@ -719,229 +446,58 @@
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
             <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
             <button class="danger" data-act="borrar" data-id="${x.id}">Borrar</button>
-          </td>`;
-        tbody.appendChild(tr);
-      }
-    }
+          </td>`; tbody.appendChild(tr);} }
 
-    $('#tabla').addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-      const obj = getCapa(id);
-      if(!obj) return;
-      if(act==='editar') loadForm(obj);
-      if(act==='pdf') exportPDF(obj, {save:true});
-      if(act==='borrar'){
-        if(confirm('¿Eliminar CAPA '+id+'?')){
-          const rest = readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable();
-        }
-      }
-    });
+    $('#tabla').addEventListener('click', async (e)=>{ const btn=e.target.closest('button'); if(!btn) return; const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const obj=getCapa(id); if(!obj) return; if(act==='editar'){ loadForm(obj);} if(act==='pdf'){ exportPDF(obj,{save:true}); } if(act==='borrar'){ if(confirm('¿Eliminar CAPA '+id+'?')){ const rest=readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable(); } } });
 
-    // ========= Guardado =========
-    $('#btnGuardar').addEventListener('click', ()=>{
-      const obj = collectForm();
-      upsertCapa(obj);
-      $('#capaId').value = obj.id; // asegurar fijo
-      alert('Guardado ✔');
-    });
+    // ========= Guardado y flujos rápidos =========
+    $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
 
-    $('#btnRevision').addEventListener('click', ()=>{
-      const obj = collectForm();
-      obj.revision = (parseInt(obj.revision||0,10) + 1);
-      $('#capaRev').value = obj.revision; $('#revQuick').value = obj.revision;
-      upsertCapa(obj);
-      alert('Guardado como nueva revisión ✔');
-    });
+    $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
 
-    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value = $('#revQuick').value; });
+    $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
+
+    $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
+
+    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
     $('#btnNuevo').addEventListener('click', ()=> clearForm());
 
     // ========= Filtros =========
-    $('#fEstado').addEventListener('change', renderTable);
-    $('#fDonde').addEventListener('change', renderTable);
-    $('#fTexto').addEventListener('input', renderTable);
+    $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
 
     // ========= Backup/Import =========
-    $('#btnBackup').addEventListener('click', ()=>{
-      const data = readCapas();
-      const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-      downloadBlob(blob, 'capas_backup.json');
-    });
+    $('#btnBackup').addEventListener('click', ()=>{ const data=readCapas(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); downloadBlob(blob,'capas_backup.json'); });
     $('#btnImport').addEventListener('click', ()=> $('#importFile').click());
-    $('#importFile').addEventListener('change', async (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const txt = await f.text();
-      try{
-        const arr = JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔');
-      }catch(err){ alert('Archivo inválido'); }
-    });
+    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); try{ const arr=JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔'); }catch(err){ alert('Archivo inválido'); }});
 
     // ========= PDF =========
-    $('#btnPDF').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      await exportPDF(obj, {save:true});
-    });
-    $('#btnPDFVer').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      if(isIOS){
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-      }else{
-        previewBlob(blob, name);
-      }
-    });
-    $('#btnPDFShare').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      const file = new File([blob], name, {type:'application/pdf'});
-      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'}); }catch(e){}
-      }else{
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-        alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.');
-      }
-    });
+    $('#btnPDF').addEventListener('click', async ()=>{ const obj=collectForm(); await exportPDF(obj,{save:true}); });
+    $('#btnPDFVer').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); if(isIOS){ const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000);} else { previewBlob(blob,name);} });
+    $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
 
-    async function exportPDF(obj, opts={save:false, returnBlob:false}){
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({unit:'pt', format:'a4'});
-
-      if(obj && obj.id){ currentEvidenceKeys = obj.evidenceKeys || []; }
-
-      const margin = 36; let y = margin;
-      pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F');
-      pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38);
-      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
-
-      function row(label, value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
-
-      y += 40;
-      row('ID', obj.id);
-      row('Revisión', obj.revision);
-      row('Estado', obj.estado);
-      row('Fecha detección', fmt(obj.fechaDeteccion));
-      row('Fecha cierre comprometida', fmt(obj.fechaCierre));
-      row('Semana', (obj.semana!=null? `S${String(obj.semana).padStart(2,'0')}` : ''));
-      row('¿Dónde?', obj.donde);
-      row('Gravedad', obj.gravedad);
-      row('Probabilidad', obj.probabilidad);
-      row('Riesgo (S×P)', `${obj.riesgoNivel} · ${obj.riesgoScore}`);
-      row('Proveedor/Cliente', obj.tercero);
-      row('Quien reporta', obj.reporta);
-
-      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520);
-      y+=6; row('Resp. contención', obj.respContencion); row('Fecha compromiso', fmt(obj.fechaContencion)); row('Completada', obj.doneContencion);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520);
-      y+=6; row('Resp. definitiva', obj.respDefinitiva); row('Fecha compromiso', fmt(obj.fechaDefinitiva)); row('Completada', obj.doneDefinitiva);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
+    async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38); pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+      function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('Semana',(obj.semana!=null?`S${String(obj.semana).padStart(2,'0')}`:'')); row('¿Dónde?',obj.donde); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Proveedor/Cliente',obj.tercero); row('Quien reporta',obj.reporta);
+      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada',obj.doneContencion);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada',obj.doneDefinitiva);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
 Plan de verificación: ${obj.planVerif||''}
 Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
-
-      // Evidencias
-      const imgs = []; const pdfs = [];
-      const keySet = new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]);
-      for(const key of keySet){
-        const blob = await DB.get(key); if(!blob) continue;
-        if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob);
-      }
-
-      if(imgs.length || pdfs.length){
-        if(y>620){ pdf.addPage(); y = margin; }
-        pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      }
-
-      // grid 2xN de imágenes
-      const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
-      for(const imgBlob of imgs){
-        const dataUrl = await blobToDataURL(imgBlob);
-        const img = await loadImage(dataUrl);
-        const ratio = Math.min(boxW/img.width, boxH/img.height);
-        const w = img.width*ratio, h = img.height*ratio;
-        const fmtI = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        pdf.addImage(dataUrl, fmtI, x + (boxW-w)/2, y + (boxH-h)/2, w, h);
-        pdf.setDrawColor(220); pdf.rect(x, y, boxW, boxH);
-        col++;
-        if(col===2){ col=0; x=margin; y += boxH + gap; if(y>740){ pdf.addPage(); y = margin; } }
-        else { x = margin + boxW + gap; }
-      }
-      if(col!==0){ y += boxH + gap; }
-
-      // Agregar páginas de PDFs de evidencia renderizadas con pdf.js
-      if(pdfs.length && window['pdfjsLib']){
-        for(const pblob of pdfs){
-          try{
-            const ab = await pblob.arrayBuffer();
-            const doc = await pdfjsLib.getDocument({data: ab}).promise;
-            const total = doc.numPages;
-            for(let i=1;i<=total;i++){
-              const page = await doc.getPage(i);
-              const viewport = page.getViewport({scale:1});
-              // Escala para caber dentro de A4 (595x842 pt) con márgenes
-              const maxW = 595 - margin*2;
-              const scale = maxW / viewport.width;
-              const v2 = page.getViewport({scale});
-              const canvas = document.createElement('canvas');
-              canvas.width = Math.ceil(v2.width); canvas.height = Math.ceil(v2.height);
-              const ctx = canvas.getContext('2d');
-              await page.render({canvasContext: ctx, viewport: v2}).promise;
-              const dataUrl = canvas.toDataURL('image/png');
-              pdf.addPage();
-              pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10);
-              pdf.addImage(dataUrl, 'PNG', margin, margin, v2.width, v2.height);
-            }
-          }catch(err){
-            pdf.addPage();
-            pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin);
-          }
-        }
-      } else if(pdfs.length){
-        pdf.addPage();
-        pdf.text('PDFs adjuntos (no embebidos):', margin, margin);
-        let yy = margin+18; pdf.setFontSize(11);
-        for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; }
-        pdf.setFontSize(12);
-      }
-
-      const name = `${obj.id}-CAPA.pdf`;
-
-      if(opts.returnBlob){
-        const blob = pdf.output('blob');
-        return {blob, name};
-      }
-      if(opts.save){ pdf.save(name); }
+      const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
+      if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
+      const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
+      if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
+      const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
     }
 
-    function writeMultiline(pdf, text, x, y, maxWidth){
-      const lines = pdf.splitTextToSize(String(text||''), maxWidth);
-      for(const ln of lines){ pdf.text(ln, x, y); y+=16; }
-      return y;
-    }
-    function blobToDataURL(blob){
-      return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
-    }
+    function writeMultiline(pdf, text, x, y, maxWidth){ const lines=pdf.splitTextToSize(String(text||''), maxWidth); for(const ln of lines){ pdf.text(ln, x, y); y+=16; } return y; }
+    function blobToDataURL(blob){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); }); }
     function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
     // ========= Init =========
-    fillWeekSelect();
-    clearForm();
-    renderTable();
-    setupHelpTips();
+    fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
   </script>
 </body>
 </html>
@@ -978,7 +534,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       button{width:100%}
     }
 
-    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px}
+    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px;scroll-margin-top:16px}
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
@@ -996,6 +552,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .danger{background:var(--danger)}
     .ok{background:var(--ok)}
     .warn{background:var(--warn)}
+    .review{background:var(--purple)}
     button:disabled{opacity:.55;cursor:not-allowed}
 
     table{width:100%;border-collapse:collapse}
@@ -1015,6 +572,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .s-open{background:rgba(255,93,108,.12)}
     .s-run{background:rgba(42,140,255,.12)}
     .s-hold{background:rgba(255,176,32,.12)}
+    .s-review{background:rgba(167,139,250,.18)}
     .s-done{background:rgba(41,192,114,.12)}
 
     .risk{font-size:11px;padding:4px 8px;border-radius:999px;border:var(--bd);display:inline-block}
@@ -1032,7 +590,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     /* Tooltip accesible (click/touch) */
     .tip{position:absolute;max-width:280px;background:#0b1119;border:var(--bd);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:10001}
 
-    /* ================= Modal centrado fijo ================= */
+    /* Modal centrado fijo */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10000}
     .modal.open{display:flex}
     body.modal-open{overflow:hidden}
@@ -1042,6 +600,10 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .modal-close{background:transparent;border:var(--bd);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
     .modal-content{padding:10px;overflow:auto}
     .modal-content embed,.modal-content img{width:100%;height:76vh;object-fit:contain}
+
+    /* Resalte al cargar en edición */
+    .pulse{animation:pulse 1.2s ease-out 2}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(42,140,255,.6)}100%{box-shadow:0 0 0 16px rgba(42,140,255,0)}}
   </style>
 </head>
 <body>
@@ -1073,6 +635,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
               <option>Abierta</option>
               <option>En contención</option>
               <option>En curso</option>
+              <option>En revisión</option>
               <option>Cerrada</option>
             </select>
           </div>
@@ -1221,6 +784,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         <div class="actions">
           <button id="btnGuardar" class="ok">Guardar</button>
           <button id="btnRevision" class="warn">Guardar como revisión +1</button>
+          <button id="btnEnviarRevision" class="review">Enviar a revisión (+1)</button>
+          <button id="btnCerrar" class="ghost">Marcar como cerrada</button>
           <button id="btnNuevo" class="ghost">Limpiar formulario</button>
           <span class="pill">ID fijo <span title="El ID no cambia entre revisiones">ⓘ</span> · <span>Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span></span>
         </div>
@@ -1232,7 +797,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
           <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
           <button id="btnImport" class="ghost">Importar (.json)</button>
           <input id="importFile" type="file" accept="application/json" style="display:none" />
-          <span class="tag">El PDF incluye miniaturas de imágenes y **páginas de PDFs adjuntos**</span>
+          <span class="tag">El PDF incluye miniaturas de imágenes y páginas de PDFs adjuntos</span>
         </div>
       </section>
 
@@ -1242,7 +807,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
         <div class="grid g3">
           <div>
             <label>Filtro estado</label>
-            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>Cerrada</option></select>
+            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>En revisión</option><option>Cerrada</option></select>
           </div>
           <div>
             <label>Filtro ¿Dónde?</label>
@@ -1294,14 +859,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <!-- PDF.js para dibujar páginas de PDFs de evidencia al final del reporte -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script>
-    // worker de pdf.js
-    if(window['pdfjsLib']){
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-    }
-  </script>
+  <script>if(window['pdfjsLib']){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';}</script>
 
   <script>
     // ========= Anti-duplicado =========
@@ -1309,352 +868,77 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       window.addEventListener('DOMContentLoaded', ()=>{
         const wraps = document.querySelectorAll('.wrap');
         for(let i=1;i<wraps.length;i++) wraps[i].remove();
-        ['formCard','listCard'].forEach(id=>{
-          const nodes = document.querySelectorAll('#'+id);
-          for(let i=1;i<nodes.length;i++) nodes[i].remove();
-        });
+        ['formCard','listCard'].forEach(id=>{ const nodes=document.querySelectorAll('#'+id); for(let i=1;i<nodes.length;i++) nodes[i].remove(); });
       });
     })();
 
     // ========= Utilidades =========
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
-
     const DB = idbKeyval; // IndexedDB para evidencias (blobs)
 
     const keySeq = () => `capa:seq:global`;
-    const nextId = () => {
-      let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1;
-      localStorage.setItem(keySeq(), String(seq));
-      return `CAPA-${String(seq).padStart(3,'0')}`;
-    }
+    const nextId = () => { let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1; localStorage.setItem(keySeq(), String(seq)); return `CAPA-${String(seq).padStart(3,'0')}`; }
 
     const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
     const bytes = n => { if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB"; }
-
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
     function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
-    function upsertCapa(obj){
-      const arr = readCapas();
-      const idx = arr.findIndex(x=>x.id===obj.id);
-      if(idx>=0) arr[idx]=obj; else arr.unshift(obj);
-      writeCapas(arr);
-      renderTable();
-    }
-
+    function upsertCapa(obj){ const arr=readCapas(); const idx=arr.findIndex(x=>x.id===obj.id); if(idx>=0) arr[idx]=obj; else arr.unshift(obj); writeCapas(arr); renderTable(); }
     function getCapa(id){ return readCapas().find(x=>x.id===id); }
 
     // ========= Riesgo =========
     const sevToNum = s => ({'Baja':1,'Media':2,'Alta':3,'Crítica':4}[s]||1);
-    function calcRisk(gravedad, prob){
-      const s = sevToNum(gravedad); const p = parseInt(prob||1,10);
-      const score = s*p;
-      let level = 'Bajo', cls = 'r-low';
-      if(score>=4 && score<=6){ level='Medio'; cls='r-med'; }
-      if(score>=7 && score<=9){ level='Alto'; cls='r-high'; }
-      if(score>=10){ level='Crítico'; cls='r-crit'; }
-      return {score, level, cls};
-    }
-
-    function updateRiskPill(){
-      const g = $('#gravedad').value; const p = $('#probabilidad').value;
-      const {score, level, cls} = calcRisk(g,p);
-      const pill = $('#riesgoPill');
-      pill.className = 'risk ' + cls;
-      pill.textContent = `${level} · ${score}`;
-    }
+    function calcRisk(gravedad, prob){ const s=sevToNum(gravedad); const p=parseInt(prob||1,10); const score=s*p; let level='Bajo', cls='r-low'; if(score>=4 && score<=6){level='Medio';cls='r-med';} if(score>=7 && score<=9){level='Alto';cls='r-high';} if(score>=10){level='Crítico';cls='r-crit';} return {score, level, cls}; }
+    function updateRiskPill(){ const g=$('#gravedad').value; const p=$('#probabilidad').value; const {score,level,cls}=calcRisk(g,p); const pill=$('#riesgoPill'); pill.className='risk '+cls; pill.textContent=`${level} · ${score}`; }
 
     // ========= Estado del formulario =========
     let currentEvidenceKeys = [];
+    let currentEditingId = null;
 
-    function fillWeekSelect(){
-      const s = $('#semanaSel'); s.innerHTML='';
-      for(let i=0;i<=52;i++){
-        const opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = `S${String(i).padStart(2,'0')}`;
-        s.appendChild(opt);
-      }
-    }
-    function setWeekSelect(n){
-      const s = $('#semanaSel');
-      if(n==='' || n==null || Number.isNaN(n)) s.value = '0'; else s.value = String(Math.max(0,Math.min(52, n)));
-    }
+    function fillWeekSelect(){ const s=$('#semanaSel'); s.innerHTML=''; for(let i=0;i<=52;i++){ const opt=document.createElement('option'); opt.value=String(i); opt.textContent=`S${String(i).padStart(2,'0')}`; s.appendChild(opt);} }
+    function setWeekSelect(n){ const s=$('#semanaSel'); if(n===''||n==null||Number.isNaN(n)) s.value='0'; else s.value=String(Math.max(0,Math.min(52,n))); }
     function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
-    function clearForm(){
-      $('#capaId').value = '';
-      $('#capaRev').value = 0;
-      $('#revQuick').value = 0;
-      $('#capaEstado').value = 'Abierta';
-      $('#fechaDeteccion').value = '';
-      $('#fechaCierre').value = '';
-      setWeekSelect(0); // semana manual
-      $('#donde').value = 'Campo';
-      $('#tercero').value = '';
-      $('#gravedad').value = 'Baja';
-      $('#probabilidad').value = '1';
-      updateRiskPill();
-      $('#reporta').value = '';
-      $('#desc').value = '';
-      $('#accionContencion').value = '';
-      $('#respContencion').value = '';
-      $('#fechaContencion').value = '';
-      $('#doneContencion').value = 'No';
-      $('#accionDefinitiva').value = '';
-      $('#respDefinitiva').value = '';
-      $('#fechaDefinitiva').value = '';
-      $('#doneDefinitiva').value = 'No';
-      $('#causaRaiz').value = '';
-      $('#planVerif').value = '';
-      $('#fechaVerif').value = '';
-      currentEvidenceKeys = [];
-      renderEvidence();
-    }
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').value='No'; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').value='No'; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; currentEvidenceKeys=[]; renderEvidence(); }
 
-    function loadForm(obj){
-      $('#capaId').value = obj.id;
-      $('#capaRev').value = obj.revision||0;
-      $('#revQuick').value = obj.revision||0;
-      $('#capaEstado').value = obj.estado||'Abierta';
-      $('#fechaDeteccion').value = obj.fechaDeteccion||'';
-      $('#fechaCierre').value = obj.fechaCierre||'';
-      setWeekSelect(typeof obj.semana==='number'? obj.semana : 0); // sin autocalcular
-      $('#donde').value = obj.donde||'Campo';
-      $('#tercero').value = obj.tercero||'';
-      $('#gravedad').value = obj.gravedad||'Baja';
-      $('#probabilidad').value = String(obj.probabilidad||1);
-      updateRiskPill();
-      $('#reporta').value = obj.reporta||'';
-      $('#desc').value = obj.desc||'';
-      $('#accionContencion').value = obj.accionContencion||'';
-      $('#respContencion').value = obj.respContencion||'';
-      $('#fechaContencion').value = obj.fechaContencion||'';
-      $('#doneContencion').value = obj.doneContencion||'No';
-      $('#accionDefinitiva').value = obj.accionDefinitiva||'';
-      $('#respDefinitiva').value = obj.respDefinitiva||'';
-      $('#fechaDefinitiva').value = obj.fechaDefinitiva||'';
-      $('#doneDefinitiva').value = obj.doneDefinitiva||'No';
-      $('#causaRaiz').value = obj.causaRaiz||'';
-      $('#planVerif').value = obj.planVerif||'';
-      $('#fechaVerif').value = obj.fechaVerif||'';
-      currentEvidenceKeys = Array.isArray(obj.evidenceKeys)? [...obj.evidenceKeys] : [];
-      renderEvidence();
-    }
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').value=obj.doneContencion||'No'; $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').value=obj.doneDefinitiva||'No'; $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
 
-    function collectForm(){
-      const id = $('#capaId').value || nextId();
-      const g = $('#gravedad').value; const p = $('#probabilidad').value;
-      const risk = calcRisk(g,p);
-      const obj = {
-        id,
-        revision: parseInt($('#capaRev').value||'0',10),
-        estado: $('#capaEstado').value,
-        fechaDeteccion: $('#fechaDeteccion').value,
-        fechaCierre: $('#fechaCierre').value,
-        semana: getWeekNumber(),
-        donde: $('#donde').value,
-        tercero: $('#tercero').value.trim(),
-        gravedad: g,
-        probabilidad: parseInt(p,10),
-        riesgoScore: risk.score,
-        riesgoNivel: risk.level,
-        reporta: $('#reporta').value.trim(),
-        desc: $('#desc').value.trim(),
-        accionContencion: $('#accionContencion').value.trim(),
-        respContencion: $('#respContencion').value.trim(),
-        fechaContencion: $('#fechaContencion').value,
-        doneContencion: $('#doneContencion').value,
-        accionDefinitiva: $('#accionDefinitiva').value.trim(),
-        respDefinitiva: $('#respDefinitiva').value.trim(),
-        fechaDefinitiva: $('#fechaDefinitiva').value,
-        doneDefinitiva: $('#doneDefinitiva').value,
-        causaRaiz: $('#causaRaiz').value.trim(),
-        planVerif: $('#planVerif').value.trim(),
-        fechaVerif: $('#fechaVerif').value,
-        evidenceKeys: [...currentEvidenceKeys],
-        updatedAt: new Date().toISOString()
-      };
-      return obj;
-    }
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').value, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').value, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
 
-    // Eventos de riesgo manual
-    $('#gravedad').addEventListener('change', updateRiskPill);
-    $('#probabilidad').addEventListener('change', updateRiskPill);
+    $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
 
     // ========= Tooltip accesible =========
-    let openTip = null;
-    function setupHelpTips(){
-      $$('.help').forEach(el=>{
-        const t = el.getAttribute('title') || el.dataset.help; if(!t) return;
-        el.dataset.help = t; el.removeAttribute('title');
-        el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0');
-        el.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); toggleTip(el); });
-        el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleTip(el); } });
-      });
-      document.addEventListener('click', closeTip);
-      window.addEventListener('resize', closeTip);
-      window.addEventListener('scroll', closeTip, true);
-    }
-    function toggleTip(el){
-      if(openTip && openTip.anchor===el){ closeTip(); return; }
-      closeTip();
-      const tip = document.createElement('div'); tip.className='tip'; tip.textContent = el.dataset.help;
-      document.body.appendChild(tip);
-      const r = el.getBoundingClientRect();
-      const top = r.bottom + window.scrollY + 8;
-      let left = r.left + window.scrollX;
-      const pad = 8;
-      const maxLeft = window.scrollX + document.documentElement.clientWidth - tip.offsetWidth - pad;
-      left = Math.min(Math.max(left, pad + window.scrollX), maxLeft);
-      tip.style.top = top+'px'; tip.style.left = left+'px';
-      openTip = {node: tip, anchor: el};
-    }
-    function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
+    let openTip=null; function setupHelpTips(){ $$('.help').forEach(el=>{ const t=el.getAttribute('title')||el.dataset.help; if(!t) return; el.dataset.help=t; el.removeAttribute('title'); el.setAttribute('aria-label','Ayuda'); el.setAttribute('tabindex','0'); el.addEventListener('click',(e)=>{e.preventDefault(); e.stopPropagation(); toggleTip(el);}); el.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); toggleTip(el);} }); }); document.addEventListener('click', closeTip); window.addEventListener('resize', closeTip); window.addEventListener('scroll', closeTip, true);} function toggleTip(el){ if(openTip && openTip.anchor===el){ closeTip(); return;} closeTip(); const tip=document.createElement('div'); tip.className='tip'; tip.textContent=el.dataset.help; document.body.appendChild(tip); const r=el.getBoundingClientRect(); const top=r.bottom+window.scrollY+8; let left=r.left+window.scrollX; const pad=8; const maxLeft=window.scrollX+document.documentElement.clientWidth-tip.offsetWidth-pad; left=Math.min(Math.max(left,pad+window.scrollX),maxLeft); tip.style.top=top+'px'; tip.style.left=left+'px'; openTip={node:tip,anchor:el}; } function closeTip(){ if(openTip){ openTip.node.remove(); openTip=null; } }
 
     // ========= Evidencias =========
-    const drop = $('#dropZone');
-    const input = $('#evidInput');
+    const drop=$('#dropZone'); const input=$('#evidInput');
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background='#0b1119';}); drop.addEventListener('dragleave', ()=>{ drop.style.background='#0e141d';}); drop.addEventListener('drop', async (e)=>{ e.preventDefault(); drop.style.background='#0e141d'; await addFiles(e.dataTransfer.files); })
+    input.addEventListener('change', async e=>{ await addFiles(e.target.files); input.value=''; });
 
-    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background = '#0b1119';})
-    drop.addEventListener('dragleave', ()=>{ drop.style.background = '#0e141d';})
-    drop.addEventListener('drop', async (e)=>{
-      e.preventDefault(); drop.style.background = '#0e141d';
-      await addFiles(e.dataTransfer.files);
-    })
-    input.addEventListener('change', async e=>{
-      await addFiles(e.target.files);
-      input.value = '';
-    });
+    async function addFiles(fileList){ for(const file of fileList){ if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue; let blob=file; if(file.type.startsWith('image/')){ try{ blob=await compressImage(file,1600,85); blob.name=file.name; }catch(_){}} const key=`ev:${crypto.randomUUID()}`; await DB.set(key, blob); currentEvidenceKeys.push(key);} renderEvidence(); }
 
-    async function addFiles(fileList){
-      for(const file of fileList){
-        if(!['application/pdf','image/png','image/jpeg','image/jpg','image/heic','image/webp'].includes(file.type) && !file.type.startsWith('image/')) continue;
-        let blob = file;
-        if(file.type.startsWith('image/')){
-          try{ blob = await compressImage(file, 1600, 85); blob.name = file.name; }
-          catch(_){ /* si no se pudo comprimir, usamos el original */ }
-        }
-        const key = `ev:${crypto.randomUUID()}`;
-        await DB.set(key, blob);
-        currentEvidenceKeys.push(key);
-      }
-      renderEvidence();
-    }
+    async function compressImage(file, maxW=1600, quality=85){ const img=new Image(); const url=URL.createObjectURL(file); await new Promise(res=>{img.onload=()=>res(); img.src=url;}); const scale=Math.min(1, maxW/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); return await new Promise(res=> canvas.toBlob(res,'image/jpeg',quality/100)); }
 
-    async function compressImage(file, maxW=1600, quality=85){
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      await new Promise(res=>{ img.onload=()=>res(); img.src=url; });
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      return await new Promise(res=> canvas.toBlob(res, 'image/jpeg', quality/100));
-    }
+    async function renderEvidence(){ const cont=$('#evidList'); cont.innerHTML=''; for(const key of currentEvidenceKeys){ const blob=await DB.get(key); if(!blob) continue; const div=document.createElement('div'); div.className='ev'; const isImg=blob.type.startsWith('image/'); if(isImg){ const img=document.createElement('img'); img.className='thumb'; img.alt=''; img.src=URL.createObjectURL(blob); img.onclick=()=> previewBlob(blob,'Imagen'); div.appendChild(img);} else { const ph=document.createElement('div'); ph.className='thumb'; ph.style.display='grid'; ph.style.placeItems='center'; ph.innerHTML='<div class="tag">PDF</div>'; ph.onclick=()=> previewBlob(blob,'Documento PDF'); div.appendChild(ph);} const meta=document.createElement('div'); meta.className='meta'; const name=document.createElement('div'); name.className='name'; name.textContent=blob.name||(isImg?'Imagen':'Documento PDF'); const size=document.createElement('div'); size.className='size'; size.textContent=`${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`; const row=document.createElement('div'); row.className='actions'; const pv=document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa'; pv.onclick=()=> previewBlob(blob, name.textContent); const dl=document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar'; dl.onclick=()=> downloadBlob(blob,(blob.name||'evidencia')); const rm=document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar'; rm.onclick=async()=>{ await DB.del(key); currentEvidenceKeys=currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); }; row.append(pv,dl,rm); meta.append(name,size,row); div.appendChild(meta); cont.appendChild(div);} }
 
-    async function renderEvidence(){
-      const cont = $('#evidList');
-      cont.innerHTML = '';
-      for(const key of currentEvidenceKeys){
-        const blob = await DB.get(key);
-        if(!blob) continue;
-        const div = document.createElement('div');
-        div.className = 'ev';
-        const isImg = blob.type.startsWith('image/');
-        if(isImg){
-          const img = document.createElement('img');
-          img.className = 'thumb'; img.alt='';
-          img.src = URL.createObjectURL(blob);
-          img.onclick = ()=> previewBlob(blob, 'Imagen');
-          div.appendChild(img);
-        } else {
-          const ph = document.createElement('div');
-          ph.className='thumb';
-          ph.style.display='grid'; ph.style.placeItems='center';
-          ph.innerHTML = '<div class="tag">PDF</div>';
-          ph.onclick = ()=> previewBlob(blob, 'Documento PDF');
-          div.appendChild(ph);
-        }
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = blob.name || (isImg? 'Imagen' : 'Documento PDF');
-        const size = document.createElement('div'); size.className='size'; size.textContent = `${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`;
-        const row = document.createElement('div'); row.className='actions';
-        const pv = document.createElement('button'); pv.className='ghost'; pv.textContent='Vista previa';
-        pv.onclick = ()=> previewBlob(blob, name.textContent);
-        const dl = document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar';
-        dl.onclick = ()=> downloadBlob(blob, (blob.name||'evidencia'));
-        const rm = document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar';
-        rm.onclick = async ()=>{ await DB.del(key); currentEvidenceKeys = currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); };
-        row.append(pv, dl, rm);
-        meta.append(name,size,row);
-        div.appendChild(meta);
-        cont.appendChild(div);
-      }
-    }
+    function previewBlob(blob, title='Vista previa'){ const url=URL.createObjectURL(blob); if(blob.type==='application/pdf' && isIOS){ window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); return; } const modal=$('#modal'); const content=$('#modalContent'); $('#modalTitle').textContent=title; content.innerHTML=''; if(blob.type.startsWith('image/')){ const img=document.createElement('img'); img.src=url; content.appendChild(img);} else if(blob.type==='application/pdf'){ const embed=document.createElement('embed'); embed.type='application/pdf'; embed.src=url+'#toolbar=1&navpanes=0&scrollbar=1'; content.appendChild(embed);} else { const a=document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);} modal.classList.add('open'); document.body.classList.add('modal-open'); }
+    $('#modalClose').addEventListener('click', closeModal); $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); }); function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
 
-    function previewBlob(blob, title='Vista previa'){
-      const url = URL.createObjectURL(blob);
-      if(blob.type==='application/pdf' && isIOS){
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-        return;
-      }
-      const modal = $('#modal');
-      const content = $('#modalContent');
-      $('#modalTitle').textContent = title;
-      content.innerHTML = '';
-      if(blob.type.startsWith('image/')){
-        const img = document.createElement('img'); img.src = url; content.appendChild(img);
-      } else if(blob.type==='application/pdf'){
-        const embed = document.createElement('embed');
-        embed.type = 'application/pdf';
-        embed.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
-        content.appendChild(embed);
-      } else {
-        const a = document.createElement('a'); a.href=url; a.textContent='Abrir'; a.target='_blank'; content.appendChild(a);
-      }
-      modal.classList.add('open');
-      document.body.classList.add('modal-open');
-    }
-
-    $('#modalClose').addEventListener('click', closeModal);
-    $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
-    function closeModal(){ $('#modal').classList.remove('open'); document.body.classList.remove('modal-open'); $('#modalContent').innerHTML=''; }
-
-    function downloadBlob(blob, name){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    }
+    function downloadBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 
     // ========= Tabla =========
-    function riskClassFromLevel(level){
-      return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low';
-    }
+    function stateClass(s){ return s==='Abierta'?'s-open': s==='En contención'?'s-hold': s==='En curso'?'s-run': s==='En revisión'?'s-review':'s-done'; }
+    function riskClassFromLevel(level){ return level==='Crítico'?'r-crit':level==='Alto'?'r-high':level==='Medio'?'r-med':'r-low'; }
 
-    function renderTable(){
-      const tbody = $('#tabla tbody');
-      const arr = readCapas();
-      const fE = $('#fEstado').value; const fD = $('#fDonde').value; const fT = ($('#fTexto').value||'').toLowerCase();
-      tbody.innerHTML='';
-      for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
-        const tr = document.createElement('tr');
-        const level = x.riesgoNivel || calcRisk(x.gravedad, x.probabilidad||1).level;
-        const score = x.riesgoScore || calcRisk(x.gravedad, x.probabilidad||1).score;
-        tr.innerHTML = `
+    function renderTable(){ const tbody=$('#tabla tbody'); const arr=readCapas(); const fE=$('#fEstado').value; const fD=$('#fDonde').value; const fT=($('#fTexto').value||'').toLowerCase(); tbody.innerHTML=''; for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){ const tr=document.createElement('tr'); const level=x.riesgoNivel||calcRisk(x.gravedad, x.probabilidad||1).level; const score=x.riesgoScore||calcRisk(x.gravedad, x.probabilidad||1).score; tr.innerHTML=`
           <td><span class="kbd">${x.id}</span></td>
           <td>${x.revision??0}</td>
-          <td><span class="state ${x.estado==='Abierta'?'s-open':x.estado==='En contención'?'s-hold':x.estado==='En curso'?'s-run':'s-done'}">${x.estado}</span></td>
+          <td><span class="state ${stateClass(x.estado)}">${x.estado}</span></td>
           <td>${fmt(x.fechaDeteccion)}</td>
-          <td>${x.semana!=null ? `S${String(x.semana).padStart(2,'0')}` : ''}</td>
+          <td>${x.semana!=null?`S${String(x.semana).padStart(2,'0')}`:''}</td>
           <td>${x.donde||''}</td>
           <td>${x.gravedad||'Baja'}</td>
           <td>${x.probabilidad||1}</td>
@@ -1664,229 +948,58 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
             <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
             <button class="danger" data-act="borrar" data-id="${x.id}">Borrar</button>
-          </td>`;
-        tbody.appendChild(tr);
-      }
-    }
+          </td>`; tbody.appendChild(tr);} }
 
-    $('#tabla').addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-      const obj = getCapa(id);
-      if(!obj) return;
-      if(act==='editar') loadForm(obj);
-      if(act==='pdf') exportPDF(obj, {save:true});
-      if(act==='borrar'){
-        if(confirm('¿Eliminar CAPA '+id+'?')){
-          const rest = readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable();
-        }
-      }
-    });
+    $('#tabla').addEventListener('click', async (e)=>{ const btn=e.target.closest('button'); if(!btn) return; const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const obj=getCapa(id); if(!obj) return; if(act==='editar'){ loadForm(obj);} if(act==='pdf'){ exportPDF(obj,{save:true}); } if(act==='borrar'){ if(confirm('¿Eliminar CAPA '+id+'?')){ const rest=readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable(); } } });
 
-    // ========= Guardado =========
-    $('#btnGuardar').addEventListener('click', ()=>{
-      const obj = collectForm();
-      upsertCapa(obj);
-      $('#capaId').value = obj.id; // asegurar fijo
-      alert('Guardado ✔');
-    });
+    // ========= Guardado y flujos rápidos =========
+    $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
 
-    $('#btnRevision').addEventListener('click', ()=>{
-      const obj = collectForm();
-      obj.revision = (parseInt(obj.revision||0,10) + 1);
-      $('#capaRev').value = obj.revision; $('#revQuick').value = obj.revision;
-      upsertCapa(obj);
-      alert('Guardado como nueva revisión ✔');
-    });
+    $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
 
-    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value = $('#revQuick').value; });
+    $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
+
+    $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
+
+    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
     $('#btnNuevo').addEventListener('click', ()=> clearForm());
 
     // ========= Filtros =========
-    $('#fEstado').addEventListener('change', renderTable);
-    $('#fDonde').addEventListener('change', renderTable);
-    $('#fTexto').addEventListener('input', renderTable);
+    $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
 
     // ========= Backup/Import =========
-    $('#btnBackup').addEventListener('click', ()=>{
-      const data = readCapas();
-      const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-      downloadBlob(blob, 'capas_backup.json');
-    });
+    $('#btnBackup').addEventListener('click', ()=>{ const data=readCapas(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); downloadBlob(blob,'capas_backup.json'); });
     $('#btnImport').addEventListener('click', ()=> $('#importFile').click());
-    $('#importFile').addEventListener('change', async (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const txt = await f.text();
-      try{
-        const arr = JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔');
-      }catch(err){ alert('Archivo inválido'); }
-    });
+    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); try{ const arr=JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔'); }catch(err){ alert('Archivo inválido'); }});
 
     // ========= PDF =========
-    $('#btnPDF').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      await exportPDF(obj, {save:true});
-    });
-    $('#btnPDFVer').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      if(isIOS){
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-      }else{
-        previewBlob(blob, name);
-      }
-    });
-    $('#btnPDFShare').addEventListener('click', async ()=>{
-      const obj = collectForm();
-      const {blob, name} = await exportPDF(obj, {returnBlob:true});
-      const file = new File([blob], name, {type:'application/pdf'});
-      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'}); }catch(e){}
-      }else{
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
-        alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.');
-      }
-    });
+    $('#btnPDF').addEventListener('click', async ()=>{ const obj=collectForm(); await exportPDF(obj,{save:true}); });
+    $('#btnPDFVer').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); if(isIOS){ const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000);} else { previewBlob(blob,name);} });
+    $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
 
-    async function exportPDF(obj, opts={save:false, returnBlob:false}){
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({unit:'pt', format:'a4'});
-
-      if(obj && obj.id){ currentEvidenceKeys = obj.evidenceKeys || []; }
-
-      const margin = 36; let y = margin;
-      pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F');
-      pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38);
-      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
-
-      function row(label, value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
-
-      y += 40;
-      row('ID', obj.id);
-      row('Revisión', obj.revision);
-      row('Estado', obj.estado);
-      row('Fecha detección', fmt(obj.fechaDeteccion));
-      row('Fecha cierre comprometida', fmt(obj.fechaCierre));
-      row('Semana', (obj.semana!=null? `S${String(obj.semana).padStart(2,'0')}` : ''));
-      row('¿Dónde?', obj.donde);
-      row('Gravedad', obj.gravedad);
-      row('Probabilidad', obj.probabilidad);
-      row('Riesgo (S×P)', `${obj.riesgoNivel} · ${obj.riesgoScore}`);
-      row('Proveedor/Cliente', obj.tercero);
-      row('Quien reporta', obj.reporta);
-
-      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520);
-      y+=6; row('Resp. contención', obj.respContencion); row('Fecha compromiso', fmt(obj.fechaContencion)); row('Completada', obj.doneContencion);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520);
-      y+=6; row('Resp. definitiva', obj.respDefinitiva); row('Fecha compromiso', fmt(obj.fechaDefinitiva)); row('Completada', obj.doneDefinitiva);
-
-      if(y>700){ pdf.addPage(); y = margin; }
-      pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
+    async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38); pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+      function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('Semana',(obj.semana!=null?`S${String(obj.semana).padStart(2,'0')}`:'')); row('¿Dónde?',obj.donde); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Proveedor/Cliente',obj.tercero); row('Quien reporta',obj.reporta);
+      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada',obj.doneContencion);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada',obj.doneDefinitiva);
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
 Plan de verificación: ${obj.planVerif||''}
 Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
-
-      // Evidencias
-      const imgs = []; const pdfs = [];
-      const keySet = new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]);
-      for(const key of keySet){
-        const blob = await DB.get(key); if(!blob) continue;
-        if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob);
-      }
-
-      if(imgs.length || pdfs.length){
-        if(y>620){ pdf.addPage(); y = margin; }
-        pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
-      }
-
-      // grid 2xN de imágenes
-      const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
-      for(const imgBlob of imgs){
-        const dataUrl = await blobToDataURL(imgBlob);
-        const img = await loadImage(dataUrl);
-        const ratio = Math.min(boxW/img.width, boxH/img.height);
-        const w = img.width*ratio, h = img.height*ratio;
-        const fmtI = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        pdf.addImage(dataUrl, fmtI, x + (boxW-w)/2, y + (boxH-h)/2, w, h);
-        pdf.setDrawColor(220); pdf.rect(x, y, boxW, boxH);
-        col++;
-        if(col===2){ col=0; x=margin; y += boxH + gap; if(y>740){ pdf.addPage(); y = margin; } }
-        else { x = margin + boxW + gap; }
-      }
-      if(col!==0){ y += boxH + gap; }
-
-      // Agregar páginas de PDFs de evidencia renderizadas con pdf.js
-      if(pdfs.length && window['pdfjsLib']){
-        for(const pblob of pdfs){
-          try{
-            const ab = await pblob.arrayBuffer();
-            const doc = await pdfjsLib.getDocument({data: ab}).promise;
-            const total = doc.numPages;
-            for(let i=1;i<=total;i++){
-              const page = await doc.getPage(i);
-              const viewport = page.getViewport({scale:1});
-              // Escala para caber dentro de A4 (595x842 pt) con márgenes
-              const maxW = 595 - margin*2;
-              const scale = maxW / viewport.width;
-              const v2 = page.getViewport({scale});
-              const canvas = document.createElement('canvas');
-              canvas.width = Math.ceil(v2.width); canvas.height = Math.ceil(v2.height);
-              const ctx = canvas.getContext('2d');
-              await page.render({canvasContext: ctx, viewport: v2}).promise;
-              const dataUrl = canvas.toDataURL('image/png');
-              pdf.addPage();
-              pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10);
-              pdf.addImage(dataUrl, 'PNG', margin, margin, v2.width, v2.height);
-            }
-          }catch(err){
-            pdf.addPage();
-            pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin);
-          }
-        }
-      } else if(pdfs.length){
-        pdf.addPage();
-        pdf.text('PDFs adjuntos (no embebidos):', margin, margin);
-        let yy = margin+18; pdf.setFontSize(11);
-        for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; }
-        pdf.setFontSize(12);
-      }
-
-      const name = `${obj.id}-CAPA.pdf`;
-
-      if(opts.returnBlob){
-        const blob = pdf.output('blob');
-        return {blob, name};
-      }
-      if(opts.save){ pdf.save(name); }
+      const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
+      if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
+      const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
+      if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
+      const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
     }
 
-    function writeMultiline(pdf, text, x, y, maxWidth){
-      const lines = pdf.splitTextToSize(String(text||''), maxWidth);
-      for(const ln of lines){ pdf.text(ln, x, y); y+=16; }
-      return y;
-    }
-    function blobToDataURL(blob){
-      return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
-    }
+    function writeMultiline(pdf, text, x, y, maxWidth){ const lines=pdf.splitTextToSize(String(text||''), maxWidth); for(const ln of lines){ pdf.text(ln, x, y); y+=16; } return y; }
+    function blobToDataURL(blob){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); }); }
     function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
     // ========= Init =========
-    fillWeekSelect();
-    clearForm();
-    renderTable();
-    setupHelpTips();
+    fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
   </script>
 </body>
 </html>
