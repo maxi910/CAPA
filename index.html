@@ -13,7 +13,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0; background:var(--bg); color:var(--ink);
-      font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
     header{padding:18px 16px; border-bottom:1px solid var(--line);
       display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
     .brand{font-weight:700; letter-spacing:.4px}
@@ -57,11 +57,9 @@
       align-items:center; justify-content:center; padding:16px; z-index:10}
     #printWrap{background:#0b0f14; padding:16px; border-radius:12px}
 
-    /* Filtros */
     .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0 0}
     .counter{color:var(--muted); font-size:12px}
 
-    /* Modal genérico */
     .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
       align-items:center; justify-content:center; padding:16px; z-index:20}
     .modal-card{background:var(--card); border:1px solid var(--line); border-radius:16px;
@@ -145,7 +143,7 @@
 
     <div>
       <label>¿Qué pasó? (1 línea)</label>
-      <input id="quePaso" type="text" placeholder="Ej: BL draft con consignatario erróneo"/>
+      <input id="quePaso" type="text" placeholder="Ej.: BL draft con consignatario erróneo"/>
     </div>
 
     <div class="grid grid2">
@@ -176,47 +174,70 @@
       </div>
     </div>
 
-    <!-- Prevenciones globales aplicables al hito seleccionado -->
+    <!-- Prevenciones globales -->
     <div id="prevBlock" style="display:none">
       <div class="bar"></div>
       <label>Prevenciones globales para <span id="prevHito"></span></label>
       <div id="prevChecklist" class="grid"></div>
-      <div class="hint">Marca lo que efectivamente cumpliste en este caso (quedará en el PDF).</div>
+      <div class="hint">Marca lo que cumpliste (quedará en el PDF).</div>
     </div>
 
     <div class="grid grid2">
       <div>
         <label>Causa breve</label>
-        <input id="causa" type="text" placeholder="Ej: Plantilla vieja / Pre-frío insuficiente"/>
+        <input id="causa" type="text" placeholder="Ej.: Plantilla vieja / Pre-frío insuficiente"/>
       </div>
+
+      <!-- Evidencia con archivo + vista previa + eliminar -->
       <div>
-        <label>Evidencia (breve o enlace)</label>
-        <input id="evidencia" type="text" placeholder="BL_v2.pdf / foto sello / logger…"/>
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div style="flex:1">
+            <label>Evidencia (PDF/PNG/JPG)</label>
+            <input id="evidFile" type="file" accept="application/pdf,image/png,image/jpeg"/>
+          </div>
+          <span id="evidBadge" class="tag">faltante</span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn" id="evidVer">Ver evidencia</button>
+          <button class="btn ghost" id="evidDel">Eliminar evidencia</button>
+        </div>
+        <input id="evidencia" type="text" placeholder="Comentario corto (opcional)"/>
       </div>
     </div>
 
+    <!-- ACCIÓN INMEDIATA -->
     <div class="grid grid2">
       <div>
-        <label>Acción de CONTENCIÓN (hoy)</label>
-        <textarea id="contencion" placeholder="Qué harás ahora para frenar el impacto"></textarea>
+        <label>Acción INMEDIATA (hoy)</label>
+        <textarea id="contencion" placeholder="Qué harás ahora para evitar el impacto del envío (ej.: corregir BL draft y reenviar a naviera)"></textarea>
         <div class="row">
           <label class="pill"><input type="radio" name="respC" value="Max" checked/> Max</label>
           <label class="pill"><input type="radio" name="respC" value="Miguel"/> Miguel</label>
           <label class="pill"><input type="radio" name="respC" value="Otro"/> Otro</label>
           <input id="respC_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
-          <input id="fechaC" type="date" style="margin-left:auto"/>
+          <div style="margin-left:auto">
+            <label class="hint" style="display:block;margin-bottom:4px">Fecha compromiso (hoy)</label>
+            <input id="fechaC" type="date"/>
+          </div>
         </div>
+        <div class="hint">Ej.: reenviar BL, avisar a naviera, bajar setpoint, retener pallet.</div>
       </div>
+
+      <!-- SOLUCIÓN PERMANENTE -->
       <div>
-        <label>Acción DEFINITIVA (que no se repita)</label>
-        <textarea id="definitiva" placeholder="Cambio de proceso/checklist/validación…"></textarea>
+        <label>Solución PERMANENTE (que no se repita)</label>
+        <textarea id="definitiva" placeholder="Cambio de proceso/checklist/validación para que no vuelva a pasar"></textarea>
         <div class="row">
           <label class="pill"><input type="radio" name="respD" value="Max" checked/> Max</label>
           <label class="pill"><input type="radio" name="respD" value="Miguel"/> Miguel</label>
           <label class="pill"><input type="radio" name="respD" value="Otro"/> Otro</label>
           <input id="respD_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
-          <input id="fechaD" type="date" style="margin-left:auto"/>
+          <div style="margin-left:auto">
+            <label class="hint" style="display:block;margin-bottom:4px">Fecha compromiso (permanente)</label>
+            <input id="fechaD" type="date"/>
+          </div>
         </div>
+        <div class="hint">Ej.: actualizar plantilla BL, doble verificación, regla en MSP, checklist de FITO antes de gate-in.</div>
       </div>
     </div>
 
@@ -224,10 +245,11 @@
       <div>
         <label>Cierre (fecha)</label>
         <input id="cierre" type="date"/>
+        <div class="hint">Día en que confirmas que la solución funciona y cierras el CAPA.</div>
       </div>
       <div>
         <label>Verificación (cómo/resultado, 1 línea)</label>
-        <input id="verif" type="text" placeholder="Ej: 0 errores en 3 zarpes; logger OK"/>
+        <input id="verif" type="text" placeholder="Ej.: 0 errores en 3 zarpes; logger OK"/>
       </div>
     </div>
 
@@ -337,10 +359,10 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 (() => {
-  const APP_VERSION = '2025.11.09-04';
+  const APP_VERSION = '2025.11.09-05';
   document.getElementById('verTag').textContent = 'v' + APP_VERSION;
 
-  // --- SW (rompe caché) ---
+  // SW anti-caché
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js?v='+APP_VERSION).catch(()=>{});
   }
@@ -349,10 +371,10 @@
   const $$ = s => Array.from(document.querySelectorAll(s));
   const byId = id => document.getElementById(id);
 
-  // ---------- Utilidades comunes ----------
+  // -------- Utilidad --------
   function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-  // ---------- Semanas ----------
+  // -------- Semanas --------
   function fillWeeks(selectEl, includeAll=false){
     const base = includeAll ? '<option value="">Todas</option>' : '<option value="">— Seleccionar —</option>';
     selectEl.innerHTML = base + Array.from({length:52},(_,i)=>{
@@ -363,15 +385,15 @@
   fillWeeks(byId('semana'), false);
   fillWeeks(byId('fSemana'), true);
 
-  // ---------- ID: previsualizar sin consumir; consumir solo al guardar/pdf/compartir ----------
+  // -------- ID: preview/consumo --------
   function getLastID(){ return parseInt(localStorage.getItem('capa_last_id') || '0', 10) || 0; }
-  function peekNextIDStr(){ return 'CAPA-' + String(getLastID() + 1).padStart(3,'0'); } // no consume
+  function peekNextIDStr(){ return 'CAPA-' + String(getLastID() + 1).padStart(3,'0'); }
   function consumeNextIDStr(){ const n = getLastID() + 1; localStorage.setItem('capa_last_id', String(n)); return 'CAPA-' + String(n).padStart(3,'0'); }
   function initIDPreview(){ const el = byId('id'); if(el){ el.placeholder = peekNextIDStr(); } }
   function assignIDIfNeeded(){ const el = byId('id'); if(el && !el.value.trim()){ el.value = consumeNextIDStr(); } }
-  initIDPreview(); // solo muestra el próximo como placeholder
+  initIDPreview();
 
-  // ---------- Reglas globales (prevenciones) ----------
+  // -------- Reglas globales --------
   function loadRules(){ try{ return JSON.parse(localStorage.getItem('capa_rules')||'[]'); }catch{ return []; } }
   function saveRules(arr){ localStorage.setItem('capa_rules', JSON.stringify(arr)); }
   function nextRuleID(){ const key='capa_last_rule_id'; const n=(parseInt(localStorage.getItem(key)||'0',10)||0)+1; localStorage.setItem(key,String(n)); return 'R'+String(n).padStart(3,'0'); }
@@ -400,7 +422,7 @@
   }
   byId('cuando').addEventListener('change', ()=>{ applyAutoSemIfNeeded(); renderPrevChecklist(); });
 
-  // ---------- Semáforo automático ----------
+  // -------- Semáforo auto --------
   const urgencyColor = (cuando) => {
     switch (cuando) {
       case 'H-24 a Gate-in':
@@ -437,14 +459,64 @@
   });
   byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
 
-  // ---------- Form helpers ----------
+  // -------- Evidencia: 1 archivo + preview --------
+  let evidTmp = null; // {name,type,dataUrl} temporal del formulario
+  function updateEvidUI(){
+    const badge = byId('evidBadge');
+    if(evidTmp){
+      badge.textContent = 'cargado: ' + (evidTmp.name || '(archivo)');
+    }else{
+      badge.textContent = 'faltante';
+    }
+  }
+  function readFileToDataURL(file){
+    return new Promise((res,rej)=>{
+      const fr = new FileReader();
+      fr.onerror = () => rej(new Error('No se pudo leer el archivo'));
+      fr.onload = () => res(fr.result);
+      fr.readAsDataURL(file);
+    });
+  }
+  byId('evidFile').addEventListener('change', async (ev)=>{
+    const f = ev.target.files && ev.target.files[0];
+    if(!f){ evidTmp = null; updateEvidUI(); return; }
+    const allowed = ['application/pdf','image/png','image/jpeg'];
+    if(!allowed.includes(f.type)){
+      alert('Solo PDF/PNG/JPG.');
+      ev.target.value = '';
+      evidTmp = null; updateEvidUI(); return;
+    }
+    try{
+      const dataUrl = await readFileToDataURL(f);
+      evidTmp = {name:f.name, type:f.type, dataUrl};
+      updateEvidUI();
+    }catch(e){
+      alert('No se pudo cargar la evidencia.');
+      evidTmp = null; updateEvidUI();
+    }
+  });
+  byId('evidDel').addEventListener('click', ()=>{
+    byId('evidFile').value = '';
+    evidTmp = null; updateEvidUI();
+  });
+  byId('evidVer').addEventListener('click', ()=>{
+    const d = evidTmp;
+    if(!d){ alert('No hay evidencia cargada.'); return; }
+    try{
+      window.open(d.dataUrl, '_blank');
+    }catch(e){
+      alert('Tu navegador bloqueó la vista previa. Comparte o guarda el PDF del CAPA.');
+    }
+  });
+
+  // -------- Form helpers --------
   function getDonde(){ const v = $$('.donde:checked').map(x=>x.value); return v.slice(0,2).join(', '); }
-  function getResp(name, otherId){ const r = $$(`input[name="${name}"]:checked`)[0]; if(!r) return ''; if(r.value==='Otro'){ const v = $(otherId).value.trim(); return v? v : 'Otro'; } return r.value; }
+  function getResp(name, otherSel){ const r = $$(`input[name="${name}"]:checked`)[0]; if(!r) return ''; if(r.value==='Otro'){ const v = $(otherSel).value.trim(); return v? v : 'Otro'; } return r.value; }
   function getPrevAplicadas(){ return $$('.prev_chk:checked').map(x=>x.value); }
 
   function readForm(){
     return {
-      id: byId('id').value.trim(),                    // NO generar aquí
+      id: byId('id').value.trim(),
       semana: byId('semana').value,
       cntr: byId('cntr').value.trim(),
       cliente: byId('cliente').value.trim(),
@@ -457,7 +529,8 @@
       donde: getDonde(),
       quien: byId('quien').value,
       causa: byId('causa').value.trim(),
-      evidencia: byId('evidencia').value.trim(),
+      evidencia: byId('evidencia').value.trim(),       // comentario opcional
+      evidenceFile: evidTmp ? {...evidTmp} : null,     // archivo embebido (DataURL)
       contencion: byId('contencion').value.trim(),
       respC: getResp('respC','#respC_otro'),
       fechaC: byId('fechaC').value,
@@ -482,7 +555,7 @@
     return true;
   }
 
-  // ---------- Persistencia CAPA ----------
+  // -------- Persistencia --------
   function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
   function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
   function upsert(d){
@@ -492,7 +565,7 @@
     saveAll(arr); renderList();
   }
 
-  // ---------- Lista + filtros ----------
+  // -------- Lista + filtros --------
   function getFilters(){ return { semana: byId('fSemana').value, cliente: byId('fCliente').value.trim().toLowerCase() }; }
   function applyFilters(arr){
     const f = getFilters();
@@ -502,7 +575,6 @@
       return okW && okC;
     });
   }
-
   function renderList(){
     const arrAll = loadAll();
     const arr = applyFilters(arrAll);
@@ -529,14 +601,15 @@
       wrap.appendChild(el);
     });
   }
-
   function fillForm(d){
     byId('id').value=d.id; byId('semana').value=d.semana; byId('cntr').value=d.cntr;
     byId('cliente').value=d.cliente; byId('estado').value=d.estado;
     byId('criterio').value=d.criterio||'';
     byId('quePaso').value=d.quePaso; byId('cuando').value=d.cuando; byId('gravedad').value=d.gravedad||'Menor';
     $$('.donde').forEach(x=>x.checked = (d.donde||'').split(', ').includes(x.value));
-    byId('quien').value=d.quien; byId('causa').value=d.causa; byId('evidencia').value=d.evidencia;
+    byId('quien').value=d.quien; byId('causa').value=d.causa;
+    byId('evidencia').value=d.evidencia||'';
+    evidTmp = d.evidenceFile ? {...d.evidenceFile} : null; updateEvidUI(); byId('evidFile').value='';
     byId('contencion').value=d.contencion; byId('fechaC').value=d.fechaC;
     byId('definitiva').value=d.definitiva; byId('fechaD').value=d.fechaD;
     byId('cierre').value=d.cierre; byId('verif').value=d.verif;
@@ -547,7 +620,7 @@
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  // ---------- PDF ----------
+  // -------- PDF --------
   function fmtDate(s){ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(); }catch(e){return s;} }
   function badge(color,text){ const map={Rojo:'#ff5d5d',Amarillo:'#ffcc00',Verde:'#3bd16f'}; const c=map[color]||'#999'; return `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${c};display:inline-block"></span>${text||color}</span>`; }
   function mapPrevenciones(ids){
@@ -557,6 +630,8 @@
   function buildPrintCard(d){
     const prev = mapPrevenciones(d.prev_aplicadas);
     const prevHTML = prev.length ? ('<ul>' + prev.map(p=>'<li>'+escapeHTML(p)+'</li>').join('') + '</ul>') : '<em>—</em>';
+    const evidLine = d.evidenceFile ? `${escapeHTML(d.evidenceFile.name)} (${escapeHTML(d.evidenceFile.type)})` : '—';
+    const evidNote = d.evidencia ? ' — ' + escapeHTML(d.evidencia) : '';
     return `
       <div style="font-size:12px; line-height:1.35">
         <h2>Tarjeta CAPA — ACONFEX</h2>
@@ -569,12 +644,12 @@
         <div class="rowp"><strong>Prevenciones aplicadas:</strong> ${prevHTML}</div>
         <div class="hr"></div>
         <div class="rowp"><strong>Causa breve:</strong> ${escapeHTML(d.causa||'')}</div>
-        <div class="rowp"><strong>Contención (hoy):</strong> ${escapeHTML(d.contencion||'')}</div>
-        <div class="rowp"><strong>Responsable:</strong> ${d.respC||''} &nbsp; <strong>Fecha:</strong> ${fmtDate(d.fechaC)||''}</div>
-        <div class="rowp"><strong>Acción definitiva:</strong> ${escapeHTML(d.definitiva||'')}</div>
-        <div class="rowp"><strong>Responsable:</strong> ${d.respD||''} &nbsp; <strong>Fecha:</strong> ${fmtDate(d.fechaD)||''}</div>
+        <div class="rowp"><strong>Evidencia:</strong> ${evidLine}${evidNote}</div>
+        <div class="rowp"><strong>Acción inmediata (hoy):</strong> ${escapeHTML(d.contencion||'')}</div>
+        <div class="rowp"><strong>Resp.:</strong> ${d.respC||''} &nbsp; <strong>Compromiso:</strong> ${fmtDate(d.fechaC)||''}</div>
+        <div class="rowp"><strong>Solución permanente:</strong> ${escapeHTML(d.definitiva||'')}</div>
+        <div class="rowp"><strong>Resp.:</strong> ${d.respD||''} &nbsp; <strong>Compromiso:</strong> ${fmtDate(d.fechaD)||''}</div>
         <div class="hr"></div>
-        <div class="rowp"><strong>Evidencia:</strong> ${escapeHTML(d.evidencia||'')}</div>
         <div class="rowp"><strong>Estado:</strong> ${d.estado||''} &nbsp; &nbsp; <strong>Cierre:</strong> ${fmtDate(d.cierre)||''}</div>
         <div class="rowp"><strong>Verificación:</strong> ${escapeHTML(d.verif||'')}</div>
         <div class="hr"></div>
@@ -605,27 +680,24 @@
     pdf.save(fname);
   }
 
-  // ---------- Eventos form ----------
-  byId('autoSem').addEventListener('change', ()=>{ /* ya manejado arriba */ });
-
+  // -------- Eventos --------
   byId('guardar').addEventListener('click', ()=>{
-    assignIDIfNeeded();                 // asigna ID solo si falta
+    assignIDIfNeeded();
     const d = readForm();
-    applyAutoSemIfNeeded();
-    d.semaforo = getManualSem();
+    applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return;
     upsert(d);
     alert('CAPA guardada: ' + d.id);
   });
 
   byId('pdf').addEventListener('click', async ()=>{
-    assignIDIfNeeded();                 // asigna ID solo si falta
+    assignIDIfNeeded();
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,false);
   });
 
   byId('compartir').addEventListener('click', async ()=>{
-    assignIDIfNeeded();                 // asigna ID solo si falta
+    assignIDIfNeeded();
     const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
     if(!validateMinimal(d)) return; await toPDF(d,true);
   });
@@ -635,11 +707,11 @@
     ['semana','cuando','quien','estado','gravedad'].forEach(id=>byId(id).value='');
     ['fechaC','fechaD','cierre'].forEach(id=>byId(id).value='');
     $$('input[name="sem"]').forEach(x=>x.checked=false);
-    $$('.donde').forEach(x=>x.checked=false);
     byId('autoSem').checked=false; byId('semManual').style.pointerEvents='auto'; byId('semManual').style.opacity=1;
+    // evidencia
+    evidTmp=null; byId('evidFile').value=''; updateEvidUI();
     // reset ID sin consumir
-    byId('id').value = '';
-    initIDPreview();
+    byId('id').value = ''; initIDPreview();
     // prevenciones UI
     byId('prevChecklist').innerHTML=''; byId('prevBlock').style.display='none';
   });
@@ -647,12 +719,11 @@
   byId('resetID').addEventListener('click', ()=>{
     if(confirm('¿Reiniciar contador de ID?')){
       localStorage.removeItem('capa_last_id');
-      byId('id').value='';
-      initIDPreview();
+      byId('id').value=''; initIDPreview();
     }
   });
 
-  // ---------- Lista eventos ----------
+  // Filtros/lista
   byId('fSemana').addEventListener('change', renderList);
   byId('fCliente').addEventListener('input', renderList);
   byId('limpiarFiltros').addEventListener('click', ()=>{
@@ -668,9 +739,8 @@
     if(act==='pdf'){ await toPDF(d,false); }
     if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ saveAll(arr.filter(x=>x.id!==id)); renderList(); } }
     if(act==='dup'){
-      const dup = {...d, id:'', ts:Date.now()}; // sin ID → se asigna al guardar/pdf/compartir
-      fillForm(dup);
-      initIDPreview();
+      const dup = {...d, id:'', ts:Date.now()};
+      fillForm(dup); initIDPreview();
       alert('Copia lista para editar. El ID se asignará al Guardar/PDF/Compartir.');
     }
     if(act==='promover'){
@@ -685,7 +755,7 @@
     }
   });
 
-  // ---------- Modal reglas globales ----------
+  // Reglas globales (UI)
   const rulesModal = byId('rulesModal');
   const editModal = byId('editRuleModal');
   let editingRid = null;
@@ -781,7 +851,7 @@
     m.addEventListener('click', (e)=>{ if(e.target===m) m.style.display='none'; });
   });
 
-  // ---------- Exportar backup ----------
+  // Exportar backup
   byId('exportar').addEventListener('click', ()=>{
     const data = loadAll();
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -790,7 +860,7 @@
     URL.revokeObjectURL(url);
   });
 
-  // ---------- Inicializar lista ----------
+  // Inicializar lista
   renderList();
 })();
 </script>
