@@ -1,868 +1,658 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CAPA · ACONFEX</title>
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
+  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias." />
+
+  <!-- Estilos minimalistas sin dependencias pesadas -->
   <style>
     :root{
-      --bg:#0b0f14; --card:#121821; --ink:#e8eff6; --muted:#9bb0c5;
-      --accent:#4da3ff; --ok:#3bd16f; --warn:#ffcc00; --bad:#ff5d5d;
-      --line:#1d2633;
+      --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
+      --accent:#2a8cff; --danger:#ff5d6c; --warn:#ffb020; --ok:#29c072;
+      --bd:1px solid rgba(255,255,255,.08);
     }
-    *{box-sizing:border-box}
-    body{margin:0; background:var(--bg); color:var(--ink);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
-    header{padding:18px 16px; border-bottom:1px solid var(--line);
-      display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
-    .brand{font-weight:700; letter-spacing:.4px}
-    .wrap{max-width:980px; margin:24px auto; padding:0 16px}
-    .card{background:var(--card); border:1px solid var(--line); border-radius:18px;
-      padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .grid{display:grid; gap:12px}
-    @media(min-width:760px){ .grid2{grid-template-columns:1fr 1fr} }
-    @media(min-width:960px){ .grid3{grid-template-columns:repeat(3,1fr)} }
-    label{font-size:12px; color:var(--muted); letter-spacing:.2px}
-    input[type="text"], input[type="date"], select, textarea{
-      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line);
-      background:#0f1520; color:var(--ink); outline:none;
-    }
-    input[readonly]{opacity:.85}
-    textarea{min-height:84px; resize:vertical}
-    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
-      background:#0f1520; border:1px solid var(--line); user-select:none}
-    .pill input{accent-color:var(--accent)}
-    .hint{color:var(--muted); font-size:12px}
-    .bar{height:1px; background:var(--line); margin:6px 0 12px}
-    .btn{padding:10px 14px; border-radius:12px; border:1px solid var(--line);
-      background:#0f1520; color:var(--ink); cursor:pointer; font-weight:600}
-    .btn.primary{background:var(--accent); color:#08121f; border-color:#2b7dd9}
-    .btn.ghost{background:transparent}
-    .tag{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
-      background:#0f1520; border:1px solid var(--line); color:var(--muted); font-size:12px}
-    .semaforo{display:flex; gap:8px; flex-wrap:wrap}
-    .dot{width:12px; height:12px; border-radius:999px; display:inline-block}
-    .dot.red{background:var(--bad)} .dot.yellow{background:var(--warn)} .dot.green{background:var(--ok)}
-    .list{display:grid; gap:8px; margin-top:10px}
-    .item{display:flex; justify-content:space-between; align-items:center; gap:10px;
-      padding:10px; background:#0f1520; border:1px solid var(--line); border-radius:12px}
-    .item small{color:var(--muted)}
-    #printCard{background:#fff; color:#000; padding:18px; width:800px; max-width:100%;
-      border:1px solid #ddd; border-radius:8px; font-family:Helvetica,Arial,sans-serif}
-    #printCard h2{margin:0 0 6px 0; font-size:18px}
-    #printCard .rowp{margin:6px 0} #printCard .hr{height:1px; background:#ddd; margin:8px 0}
-    #printModal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
-      align-items:center; justify-content:center; padding:16px; z-index:10}
-    #printWrap{background:#0b0f14; padding:16px; border-radius:12px}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
+    .wrap{max-width:1100px;margin:auto;padding:16px}
+    header{display:flex;gap:12px;align-items:center;margin:6px 0 16px}
+    header .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header h1{font-size:20px;margin:0}
+    header .sub{color:var(--muted);font-size:12px}
 
-    .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0 0}
-    .counter{color:var(--muted); font-size:12px}
+    .grid{display:grid;gap:12px}
+    .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:800px){.g2,.g3{grid-template-columns:1fr}}
 
-    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
-      align-items:center; justify-content:center; padding:16px; z-index:20}
-    .modal-card{background:var(--card); border:1px solid var(--line); border-radius:16px;
-      padding:16px; max-width:720px; width:100%}
+    .card{background:var(--panel);border:var(--bd);border-radius:14px;padding:14px}
+    .card h2{font-size:16px;margin:0 0 8px}
+    .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none}
+    textarea{min-height:88px;resize:vertical}
+
+    .row{display:flex;gap:8px;align-items:center}
+    .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
+    .help{border-bottom:1px dotted var(--muted);cursor:help}
+
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer}
+    .ghost{background:transparent;border:var(--bd);color:var(--ink)}
+    .danger{background:var(--danger)}
+    .ok{background:var(--ok)}
+    .warn{background:var(--warn)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:var(--bd);text-align:left;font-size:13px}
+    th{color:var(--muted);font-weight:600}
+
+    /* Evidencias */
+    .uploader{border:2px dashed rgba(255,255,255,.12);border-radius:14px;padding:12px;text-align:center;background:#0e141d}
+    .evidence-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+    .ev{border:var(--bd);border-radius:12px;overflow:hidden;background:#0b1119}
+    .thumb{display:block;width:100%;height:120px;object-fit:cover;background:#0b0f14}
+    .ev .meta{padding:8px}
+    .ev .meta .name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ev .meta .size{font-size:11px;color:var(--muted)}
+
+    .state{font-size:11px;padding:4px 8px;border-radius:999px;border:var(--bd);display:inline-block}
+    .s-open{background:rgba(255,93,108,.12)}
+    .s-run{background:rgba(42,140,255,.12)}
+    .s-hold{background:rgba(255,176,32,.12)}
+    .s-done{background:rgba(41,192,114,.12)}
+
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:var(--bd);background:#0e141d;color:var(--muted);font-size:12px}
+    .pill input{width:auto;background:transparent;border:none;padding:0;color:var(--ink)}
+
+    .footer{color:var(--muted);font-size:12px;margin:18px 0 6px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0e141d;border:var(--bd);border-radius:6px;padding:2px 6px}
   </style>
 </head>
 <body>
-<header>
-  <div class="brand">ACONFEX · CAPA</div>
-  <span class="tag">MSP-Lite</span>
-  <span class="tag">PDF listo</span>
-  <span class="tag" id="verTag"></span>
-  <button class="btn ghost" id="openRules">Reglas globales</button>
-</header>
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>ACONFEX · CAPA</h1>
+        <div class="sub">Correctivas y Preventivas para operaciones de exportación · 100% local (no envía datos)</div>
+      </div>
+    </header>
 
-<div class="wrap grid">
-  <!-- Formulario CAPA -->
-  <section class="card grid">
-    <div class="grid grid3">
-      <div>
-        <label>ID (auto)</label>
-        <input id="id" type="text" readonly placeholder=""/>
-      </div>
-      <div>
-        <label>Semana</label>
-        <select id="semana"></select>
-      </div>
-      <div>
-        <label>CNTR</label>
-        <input id="cntr" type="text" placeholder="MSKU…"/>
-      </div>
-    </div>
-
-    <div class="grid grid2">
-      <div>
-        <label>Cliente</label>
-        <input id="cliente" type="text" placeholder="Cliente"/>
-      </div>
-      <div>
-        <label>Estado</label>
-        <select id="estado">
-          <option value="Abierta">Abierta</option>
-          <option value="En curso">En curso</option>
-          <option value="Cerrada">Cerrada</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid grid3">
-      <div>
-        <label>Semáforo</label>
-        <div class="semaforo row" id="semManual">
-          <label class="pill"><input type="radio" name="sem" value="Rojo"/> <span class="dot red"></span>Rojo</label>
-          <label class="pill"><input type="radio" name="sem" value="Amarillo"/> <span class="dot yellow"></span>Amarillo</label>
-          <label class="pill"><input type="radio" name="sem" value="Verde"/> <span class="dot green"></span>Verde</label>
-        </div>
-      </div>
-      <div>
-        <label>Modo</label>
-        <div class="row">
-          <label class="pill"><input type="checkbox" id="autoSem"/> Semáforo automático</label>
-        </div>
-        <div class="hint">Regla: peor entre (urgencia por hito) y (gravedad de la matriz).</div>
-      </div>
-      <div>
-        <label>Gravedad (matriz)</label>
-        <select id="gravedad">
-          <option value="Menor">Menor</option>
-          <option value="Mayor">Mayor</option>
-          <option value="Crítica">Crítica</option>
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <label>Criterio del semáforo (1 línea)</label>
-      <input id="criterio" type="text" placeholder="Por qué el color (ej.: H-24 + error BL)"/>
-    </div>
-
-    <div class="bar"></div>
-
-    <div>
-      <label>¿Qué pasó? (1 línea)</label>
-      <input id="quePaso" type="text" placeholder="Ej.: BL draft con consignatario erróneo"/>
-    </div>
-
-    <div class="grid grid2">
-      <div>
-        <label>¿CUÁNDO se detectó?</label>
-        <select id="cuando">
-          <option value="">— Seleccionar —</option>
-          <option>H-72 a Gate-in</option>
-          <option>H-48 a Gate-in</option>
-          <option>H-24 a Gate-in</option>
-          <option>Gate-in / CY cutoff</option>
-          <option>En terminal (espera a nave)</option>
-          <option>ETD (on board)</option>
-          <option>Post-ETD</option>
-          <option>Arribo</option>
-        </select>
-      </div>
-      <div>
-        <label>¿Quién lo detectó?</label>
-        <select id="quien">
-          <option>Max</option>
-          <option>Miguel</option>
-          <option>Cliente</option>
-          <option>Naviera</option>
-          <option>Planta</option>
-          <option>Otro</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Prevenciones globales -->
-    <div id="prevBlock" style="display:none">
-      <div class="bar"></div>
-      <label>Prevenciones globales para <span id="prevHito"></span></label>
-      <div id="prevChecklist" class="grid"></div>
-      <div class="hint">Marca lo que cumpliste (quedará en el PDF).</div>
-    </div>
-
-    <div class="grid grid2">
-      <div>
-        <label>Causa breve</label>
-        <input id="causa" type="text" placeholder="Ej.: Plantilla vieja / Pre-frío insuficiente"/>
-      </div>
-
-      <!-- Evidencia con archivo + vista previa + eliminar -->
-      <div>
-        <div class="row" style="justify-content:space-between;align-items:flex-end">
-          <div style="flex:1">
-            <label>Evidencia (PDF/PNG/JPG)</label>
-            <input id="evidFile" type="file" accept="application/pdf,image/png,image/jpeg"/>
+    <div class="grid g2">
+      <!-- Formulario principal -->
+      <section class="card" id="formCard">
+        <h2>Nuevo/Editar CAPA</h2>
+        <div class="grid g3">
+          <div>
+            <label>ID (fijo)</label>
+            <input id="capaId" placeholder="Se genera al guardar" readonly>
           </div>
-          <span id="evidBadge" class="tag">faltante</span>
-        </div>
-        <div class="row" style="margin-top:6px">
-          <button class="btn" id="evidVer">Ver evidencia</button>
-          <button class="btn ghost" id="evidDel">Eliminar evidencia</button>
-        </div>
-        <input id="evidencia" type="text" placeholder="Comentario corto (opcional)"/>
-      </div>
-    </div>
-
-    <!-- ACCIÓN INMEDIATA -->
-    <div class="grid grid2">
-      <div>
-        <label>Acción INMEDIATA (hoy)</label>
-        <textarea id="contencion" placeholder="Qué harás ahora para evitar el impacto del envío (ej.: corregir BL draft y reenviar a naviera)"></textarea>
-        <div class="row">
-          <label class="pill"><input type="radio" name="respC" value="Max" checked/> Max</label>
-          <label class="pill"><input type="radio" name="respC" value="Miguel"/> Miguel</label>
-          <label class="pill"><input type="radio" name="respC" value="Otro"/> Otro</label>
-          <input id="respC_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
-          <div style="margin-left:auto">
-            <label class="hint" style="display:block;margin-bottom:4px">Fecha compromiso (hoy)</label>
-            <input id="fechaC" type="date"/>
+          <div>
+            <label>Revisión</label>
+            <input id="capaRev" type="number" value="0" min="0">
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="capaEstado">
+              <option>Abierta</option>
+              <option>En contención</option>
+              <option>En curso</option>
+              <option>Cerrada</option>
+            </select>
           </div>
         </div>
-        <div class="hint">Ej.: reenviar BL, avisar a naviera, bajar setpoint, retener pallet.</div>
-      </div>
 
-      <!-- SOLUCIÓN PERMANENTE -->
-      <div>
-        <label>Solución PERMANENTE (que no se repita)</label>
-        <textarea id="definitiva" placeholder="Cambio de proceso/checklist/validación para que no vuelva a pasar"></textarea>
-        <div class="row">
-          <label class="pill"><input type="radio" name="respD" value="Max" checked/> Max</label>
-          <label class="pill"><input type="radio" name="respD" value="Miguel"/> Miguel</label>
-          <label class="pill"><input type="radio" name="respD" value="Otro"/> Otro</label>
-          <input id="respD_otro" type="text" placeholder="Otro (opcional)" style="max-width:220px"/>
-          <div style="margin-left:auto">
-            <label class="hint" style="display:block;margin-bottom:4px">Fecha compromiso (permanente)</label>
-            <input id="fechaD" type="date"/>
+        <div class="grid g3">
+          <div>
+            <label>Fecha de detección <span class="help" title="Cuándo se detectó el problema por primera vez">¿Qué es?</span></label>
+            <input id="fechaDeteccion" type="date">
+          </div>
+          <div>
+            <label>Fecha de cierre comprometida <span class="help" title="Fecha objetivo para cerrar definitivamente la CAPA tras completar acciones y verificación">¿Qué es?</span></label>
+            <input id="fechaCierre" type="date">
+          </div>
+          <div>
+            <label>¿Dónde? (proceso/lugar)</label>
+            <select id="donde">
+              <option value="Campo">Campo</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Packing">Packing</option>
+              <option value="Naviera">Naviera</option>
+              <option value="Documentación">Documentación</option>
+              <option value="Cliente">Cliente</option>
+              <option value="Otro">Otro</option>
+            </select>
           </div>
         </div>
-        <div class="hint">Ej.: actualizar plantilla BL, doble verificación, regla en MSP, checklist de FITO antes de gate-in.</div>
-      </div>
-    </div>
 
-    <div class="grid grid2">
-      <div>
-        <label>Cierre (fecha)</label>
-        <input id="cierre" type="date"/>
-        <div class="hint">Día en que confirmas que la solución funciona y cierras el CAPA.</div>
-      </div>
-      <div>
-        <label>Verificación (cómo/resultado, 1 línea)</label>
-        <input id="verif" type="text" placeholder="Ej.: 0 errores en 3 zarpes; logger OK"/>
-      </div>
-    </div>
-
-    <div class="actions row">
-      <button class="btn" id="guardar">Guardar CAPA</button>
-      <button class="btn primary" id="pdf">Generar PDF</button>
-      <button class="btn" id="compartir">Compartir PDF</button>
-      <button class="btn ghost" id="limpiar">Limpiar</button>
-    </div>
-  </section>
-
-  <!-- Lista + Filtros -->
-  <section class="card">
-    <div class="row" style="justify-content:space-between; align-items:center">
-      <h3 style="margin:0">Guardadas</h3>
-      <div class="row">
-        <button class="btn ghost" id="exportar">Exportar JSON</button>
-        <button class="btn ghost" id="resetID">Reiniciar ID</button>
-      </div>
-    </div>
-
-    <div class="filters">
-      <div>
-        <label>Filtrar por Semana</label>
-        <select id="fSemana" style="min-width:110px"></select>
-      </div>
-      <div>
-        <label>Filtrar por Cliente</label>
-        <input id="fCliente" type="text" placeholder="Nombre contiene…"/>
-      </div>
-      <button class="btn" id="limpiarFiltros">Limpiar filtros</button>
-      <span class="counter" id="countInfo"></span>
-    </div>
-
-    <div id="lista" class="list"></div>
-  </section>
-
-  <!-- Modal impresión -->
-  <div id="printModal"><div id="printWrap"><div id="printCard"></div></div></div>
-
-  <!-- Modal Reglas Globales -->
-  <div id="rulesModal" class="modal">
-    <div class="modal-card">
-      <div class="row" style="justify-content:space-between; align-items:center">
-        <h3 style="margin:0">Prevenciones globales</h3>
-        <div class="row">
-          <button class="btn" id="newRule">Nueva regla</button>
-          <button class="btn ghost" id="closeRules">Cerrar</button>
+        <div class="grid g2">
+          <div>
+            <label>Proveedor/Cliente (opcional)</label>
+            <input id="tercero" placeholder="Nombre del campo, packing, naviera o cliente"/>
+          </div>
+          <div>
+            <label>Quien reporta</label>
+            <input id="reporta" placeholder="Nombre del responsable del registro"/>
+          </div>
         </div>
-      </div>
-      <div id="rulesList" class="list" style="margin-top:10px"></div>
+
+        <label>Descripción del problema</label>
+        <textarea id="desc" placeholder="Qué ocurrió, dónde, impacto (n° pallets, cajas afectadas, lote, contenedor, etc.)"></textarea>
+
+        <div class="grid g2">
+          <div>
+            <h3>Acción de contención <span class="help" title="Medida inmediata para contener/mitigar el impacto ahora (ej.: detener embarque del lote, re-etiquetar, aumentar inspección). NO resuelve la causa raíz.">¿Qué es?</span></h3>
+            <label>Descripción</label>
+            <textarea id="accionContencion"></textarea>
+            <div class="grid g3">
+              <div>
+                <label>Responsable</label>
+                <input id="respContencion"/>
+              </div>
+              <div>
+                <label>Fecha compromiso</label>
+                <input id="fechaContencion" type="date"/>
+              </div>
+              <div>
+                <label>Completada</label>
+                <select id="doneContencion"><option>No</option><option>Sí</option></select>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>Acción definitiva <span class="help" title="Medida que elimina la CAUSA RAÍZ para que no vuelva a ocurrir (ej.: estandarizar procedimiento, modificar especificación, contrato, proveedor, capacitación).">¿Qué es?</span></h3>
+            <label>Descripción</label>
+            <textarea id="accionDefinitiva"></textarea>
+            <div class="grid g3">
+              <div>
+                <label>Responsable</label>
+                <input id="respDefinitiva"/>
+              </div>
+              <div>
+                <label>Fecha compromiso</label>
+                <input id="fechaDefinitiva" type="date"/>
+              </div>
+              <div>
+                <label>Completada</label>
+                <select id="doneDefinitiva"><option>No</option><option>Sí</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Causa raíz y verificación</h3>
+        <div class="grid g3">
+          <div>
+            <label>Causa raíz (5-Why/Ishikawa)</label>
+            <input id="causaRaiz" placeholder="Enunciado concreto y verificable"/>
+          </div>
+          <div>
+            <label>Plan de verificación</label>
+            <input id="planVerif" placeholder="Cómo validar eficacia (métrica, muestreo, periodo)"/>
+          </div>
+          <div>
+            <label>Fecha verificación</label>
+            <input id="fechaVerif" type="date"/>
+          </div>
+        </div>
+
+        <h3>Evidencias (PDF/PNG/JPG) <span class="tag">se guardan localmente</span></h3>
+        <div class="uploader" id="dropZone">
+          <p>Arrastra archivos aquí o <label for="evidInput" class="help" title="Selecciona archivos de tu equipo"><span class="kbd">Selecciona</span></label></p>
+          <input id="evidInput" type="file" accept="application/pdf,image/png,image/jpeg" multiple style="display:none"/>
+        </div>
+        <div class="evidence-list" id="evidList"></div>
+
+        <div class="actions">
+          <button id="btnGuardar" class="ok">Guardar</button>
+          <button id="btnRevision" class="warn">Guardar como revisión +1</button>
+          <button id="btnNuevo" class="ghost">Limpiar formulario</button>
+          <span class="pill">ID fijo <span title="El ID no cambia entre revisiones">ⓘ</span> · <span>Revisión <input id="revQuick" type="number" min="0" style="width:64px"></span></span>
+        </div>
+
+        <div class="actions" style="margin-top:6px">
+          <button id="btnPDF">Exportar PDF</button>
+          <button id="btnBackup" class="ghost">Exportar respaldo (.json)</button>
+          <button id="btnImport" class="ghost">Importar (.json)</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none" />
+          <span class="tag">El PDF incluye miniaturas de imágenes y listado de PDFs</span>
+        </div>
+      </section>
+
+      <!-- Listado -->
+      <section class="card" id="listCard">
+        <h2>CAPAs registradas</h2>
+        <div class="grid g3">
+          <div>
+            <label>Filtro estado</label>
+            <select id="fEstado"><option value="">Todos</option><option>Abierta</option><option>En contención</option><option>En curso</option><option>Cerrada</option></select>
+          </div>
+          <div>
+            <label>Filtro ¿Dónde?</label>
+            <select id="fDonde"><option value="">Todos</option><option>Campo</option><option>Transporte</option><option>Packing</option><option>Naviera</option><option>Documentación</option><option>Cliente</option><option>Otro</option></select>
+          </div>
+          <div>
+            <label>Buscar texto</label>
+            <input id="fTexto" placeholder="ID, proveedor, problema…"/>
+          </div>
+        </div>
+        <div style="overflow:auto;margin-top:8px">
+          <table id="tabla">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Rev</th>
+                <th>Estado</th>
+                <th>Detección</th>
+                <th>Cierre</th>
+                <th>¿Dónde?</th>
+                <th>Proveedor/Cliente</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
     </div>
+
+    <div class="footer">Tip: publica este archivo como <span class="kbd">index.html</span> en GitHub Pages. Funciona 100% local (IndexedDB + localStorage).</div>
   </div>
 
-  <!-- Modal Crear/Editar Regla -->
-  <div id="editRuleModal" class="modal">
-    <div class="modal-card">
-      <h3 id="ruleTitle" style="margin:0 0 8px 0">Nueva regla</h3>
-      <div class="grid grid3">
-        <div>
-          <label>Hito</label>
-          <select id="ruleHito">
-            <option>H-72 a Gate-in</option>
-            <option>H-48 a Gate-in</option>
-            <option>H-24 a Gate-in</option>
-            <option>Gate-in / CY cutoff</option>
-            <option>En terminal (espera a nave)</option>
-            <option>ETD (on board)</option>
-            <option>Post-ETD</option>
-            <option>Arribo</option>
-            <option>Todas</option>
-          </select>
-        </div>
-        <div>
-          <label>Dueño</label>
-          <select id="ruleOwner">
-            <option>Max</option>
-            <option>Miguel</option>
-            <option>Otro</option>
-          </select>
-        </div>
-        <div>
-          <label>Activa</label>
-          <div class="row"><label class="pill"><input type="checkbox" id="ruleActive" checked/> Regla activa</label></div>
-        </div>
-      </div>
-      <div class="grid">
-        <div>
-          <label>Regla (1 línea, verificable)</label>
-          <input id="ruleTexto" type="text" placeholder="No avanzar a [HITO] si no está [CONDICIÓN] con evidencia [X]"/>
-        </div>
-        <div>
-          <label>Evidencia requerida (1 línea)</label>
-          <input id="ruleEvid" type="text" placeholder="PDF BL draft + FITO en carpeta / foto logger / etc."/>
-        </div>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="saveRule">Guardar</button>
-        <button class="btn ghost" id="cancelRule">Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
+  <!-- Librerías livianas por CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-<!-- libs PDF -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script>
-(() => {
-  const APP_VERSION = '2025.11.09-05';
-  document.getElementById('verTag').textContent = 'v' + APP_VERSION;
+  <script>
+    // ========= Utilidades =========
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
 
-  // SW anti-caché
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v='+APP_VERSION).catch(()=>{});
-  }
+    const DB = idbKeyval; // IndexedDB para evidencias (blobs)
 
-  const $ = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
-  const byId = id => document.getElementById(id);
-
-  // -------- Utilidad --------
-  function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-  // -------- Semanas --------
-  function fillWeeks(selectEl, includeAll=false){
-    const base = includeAll ? '<option value="">Todas</option>' : '<option value="">— Seleccionar —</option>';
-    selectEl.innerHTML = base + Array.from({length:52},(_,i)=>{
-      const w = String(i+1).padStart(2,'0');
-      return `<option value="S${w}">S${w}</option>`;
-    }).join('');
-  }
-  fillWeeks(byId('semana'), false);
-  fillWeeks(byId('fSemana'), true);
-
-  // -------- ID: preview/consumo --------
-  function getLastID(){ return parseInt(localStorage.getItem('capa_last_id') || '0', 10) || 0; }
-  function peekNextIDStr(){ return 'CAPA-' + String(getLastID() + 1).padStart(3,'0'); }
-  function consumeNextIDStr(){ const n = getLastID() + 1; localStorage.setItem('capa_last_id', String(n)); return 'CAPA-' + String(n).padStart(3,'0'); }
-  function initIDPreview(){ const el = byId('id'); if(el){ el.placeholder = peekNextIDStr(); } }
-  function assignIDIfNeeded(){ const el = byId('id'); if(el && !el.value.trim()){ el.value = consumeNextIDStr(); } }
-  initIDPreview();
-
-  // -------- Reglas globales --------
-  function loadRules(){ try{ return JSON.parse(localStorage.getItem('capa_rules')||'[]'); }catch{ return []; } }
-  function saveRules(arr){ localStorage.setItem('capa_rules', JSON.stringify(arr)); }
-  function nextRuleID(){ const key='capa_last_rule_id'; const n=(parseInt(localStorage.getItem(key)||'0',10)||0)+1; localStorage.setItem(key,String(n)); return 'R'+String(n).padStart(3,'0'); }
-  function ruleMatchesHito(ruleHito, hito){ return ruleHito === 'Todas' || ruleHito === hito; }
-
-  function renderPrevChecklist(){
-    const hito = byId('cuando').value;
-    const block = byId('prevBlock');
-    const lbl = byId('prevHito');
-    const wrap = byId('prevChecklist');
-    const rules = loadRules().filter(r => r.active && hito && ruleMatchesHito(r.hito, hito));
-    if(!hito || rules.length===0){
-      block.style.display='none';
-      wrap.innerHTML='';
-      return;
+    const keySeq = () => `capa:seq:${new Date().getFullYear()}`;
+    const nextId = () => {
+      const y = new Date().getFullYear();
+      let seq = parseInt(localStorage.getItem(keySeq())||'0',10)+1;
+      localStorage.setItem(keySeq(), String(seq));
+      return `${y}-${String(seq).padStart(4,'0')}`; // p.ej. 2025-0007
     }
-    block.style.display='block';
-    lbl.textContent = hito;
-    const currentChecked = new Set($$('.prev_chk:checked').map(x=>x.value));
-    wrap.innerHTML = rules.map(r => `
-      <label class="pill" title="${escapeHTML(r.evidencia||'')}">
-        <input type="checkbox" class="prev_chk" value="${r.rid}" ${currentChecked.has(r.rid)?'checked':''}/>
-        ${escapeHTML(r.texto || '(Regla sin texto)')}
-      </label>
-    `).join('');
-  }
-  byId('cuando').addEventListener('change', ()=>{ applyAutoSemIfNeeded(); renderPrevChecklist(); });
 
-  // -------- Semáforo auto --------
-  const urgencyColor = (cuando) => {
-    switch (cuando) {
-      case 'H-24 a Gate-in':
-      case 'Gate-in / CY cutoff':
-      case 'ETD (on board)':
-        return 'Rojo';
-      case 'H-48 a Gate-in':
-      case 'En terminal (espera a nave)':
-        return 'Amarillo';
-      case 'H-72 a Gate-in':
-      case 'Post-ETD':
-      case 'Arribo':
-      default:
-        return 'Verde';
+    const fmt = d => d? new Date(d).toLocaleDateString('es-CL') : '';
+    const bytes = n => {
+      if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(1)+" MB";
     }
-  };
-  const gravityColor = (g) => ({'Menor':'Verde','Mayor':'Amarillo','Crítica':'Rojo'}[g] || 'Verde');
-  const colorRank = c => ({'Verde':1,'Amarillo':2,'Rojo':3}[c]||1);
-  const worstColor = (a,b) => (colorRank(a) >= colorRank(b) ? a : b);
-  function getManualSem(){ const r = $$('input[name="sem"]:checked')[0]; return r? r.value : ''; }
-  function setManualSem(color){ $$('input[name="sem"]').forEach(r => r.checked = (r.value===color)); }
-  function applyAutoSemIfNeeded(){
-    const auto = byId('autoSem').checked;
-    if(!auto) return;
-    const cUrg = urgencyColor(byId('cuando').value);
-    const cGrv = gravityColor(byId('gravedad').value);
-    setManualSem(worstColor(cUrg, cGrv));
-  }
-  byId('autoSem').addEventListener('change', ()=>{
-    const dis = byId('autoSem').checked;
-    byId('semManual').style.pointerEvents = dis ? 'none' : 'auto';
-    byId('semManual').style.opacity = dis ? .6 : 1;
-    applyAutoSemIfNeeded();
-  });
-  byId('gravedad').addEventListener('change', applyAutoSemIfNeeded);
 
-  // -------- Evidencia: 1 archivo + preview --------
-  let evidTmp = null; // {name,type,dataUrl} temporal del formulario
-  function updateEvidUI(){
-    const badge = byId('evidBadge');
-    if(evidTmp){
-      badge.textContent = 'cargado: ' + (evidTmp.name || '(archivo)');
-    }else{
-      badge.textContent = 'faltante';
+    function readCapas(){ return JSON.parse(localStorage.getItem('capas')||'[]'); }
+    function writeCapas(arr){ localStorage.setItem('capas', JSON.stringify(arr)); }
+    function upsertCapa(obj){
+      const arr = readCapas();
+      const idx = arr.findIndex(x=>x.id===obj.id);
+      if(idx>=0) arr[idx]=obj; else arr.unshift(obj);
+      writeCapas(arr);
+      renderTable();
     }
-  }
-  function readFileToDataURL(file){
-    return new Promise((res,rej)=>{
-      const fr = new FileReader();
-      fr.onerror = () => rej(new Error('No se pudo leer el archivo'));
-      fr.onload = () => res(fr.result);
-      fr.readAsDataURL(file);
+
+    function getCapa(id){ return readCapas().find(x=>x.id===id); }
+
+    // ========= Estado del formulario =========
+    let currentEvidenceKeys = []; // claves en IndexedDB
+
+    function clearForm(){
+      $('#capaId').value = '';
+      $('#capaRev').value = 0;
+      $('#revQuick').value = 0;
+      $('#capaEstado').value = 'Abierta';
+      $('#fechaDeteccion').value = '';
+      $('#fechaCierre').value = '';
+      $('#donde').value = 'Campo';
+      $('#tercero').value = '';
+      $('#reporta').value = '';
+      $('#desc').value = '';
+      $('#accionContencion').value = '';
+      $('#respContencion').value = '';
+      $('#fechaContencion').value = '';
+      $('#doneContencion').value = 'No';
+      $('#accionDefinitiva').value = '';
+      $('#respDefinitiva').value = '';
+      $('#fechaDefinitiva').value = '';
+      $('#doneDefinitiva').value = 'No';
+      $('#causaRaiz').value = '';
+      $('#planVerif').value = '';
+      $('#fechaVerif').value = '';
+      currentEvidenceKeys = [];
+      renderEvidence();
+    }
+
+    function loadForm(obj){
+      $('#capaId').value = obj.id;
+      $('#capaRev').value = obj.revision||0;
+      $('#revQuick').value = obj.revision||0;
+      $('#capaEstado').value = obj.estado||'Abierta';
+      $('#fechaDeteccion').value = obj.fechaDeteccion||'';
+      $('#fechaCierre').value = obj.fechaCierre||'';
+      $('#donde').value = obj.donde||'Campo';
+      $('#tercero').value = obj.tercero||'';
+      $('#reporta').value = obj.reporta||'';
+      $('#desc').value = obj.desc||'';
+      $('#accionContencion').value = obj.accionContencion||'';
+      $('#respContencion').value = obj.respContencion||'';
+      $('#fechaContencion').value = obj.fechaContencion||'';
+      $('#doneContencion').value = obj.doneContencion||'No';
+      $('#accionDefinitiva').value = obj.accionDefinitiva||'';
+      $('#respDefinitiva').value = obj.respDefinitiva||'';
+      $('#fechaDefinitiva').value = obj.fechaDefinitiva||'';
+      $('#doneDefinitiva').value = obj.doneDefinitiva||'No';
+      $('#causaRaiz').value = obj.causaRaiz||'';
+      $('#planVerif').value = obj.planVerif||'';
+      $('#fechaVerif').value = obj.fechaVerif||'';
+      currentEvidenceKeys = Array.isArray(obj.evidenceKeys)? [...obj.evidenceKeys] : [];
+      renderEvidence();
+    }
+
+    function collectForm(){
+      const id = $('#capaId').value || nextId();
+      const obj = {
+        id,
+        revision: parseInt($('#capaRev').value||'0',10),
+        estado: $('#capaEstado').value,
+        fechaDeteccion: $('#fechaDeteccion').value,
+        fechaCierre: $('#fechaCierre').value,
+        donde: $('#donde').value,
+        tercero: $('#tercero').value.trim(),
+        reporta: $('#reporta').value.trim(),
+        desc: $('#desc').value.trim(),
+        accionContencion: $('#accionContencion').value.trim(),
+        respContencion: $('#respContencion').value.trim(),
+        fechaContencion: $('#fechaContencion').value,
+        doneContencion: $('#doneContencion').value,
+        accionDefinitiva: $('#accionDefinitiva').value.trim(),
+        respDefinitiva: $('#respDefinitiva').value.trim(),
+        fechaDefinitiva: $('#fechaDefinitiva').value,
+        doneDefinitiva: $('#doneDefinitiva').value,
+        causaRaiz: $('#causaRaiz').value.trim(),
+        planVerif: $('#planVerif').value.trim(),
+        fechaVerif: $('#fechaVerif').value,
+        evidenceKeys: [...currentEvidenceKeys],
+        updatedAt: new Date().toISOString()
+      };
+      return obj;
+    }
+
+    // ========= Evidencias =========
+    const drop = $('#dropZone');
+    const input = $('#evidInput');
+
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.background = '#0b1119';})
+    drop.addEventListener('dragleave', e=>{ drop.style.background = '#0e141d';})
+    drop.addEventListener('drop', async (e)=>{
+      e.preventDefault(); drop.style.background = '#0e141d';
+      await addFiles(e.dataTransfer.files);
+    })
+    input.addEventListener('change', async e=>{
+      await addFiles(e.target.files);
+      input.value = '';
     });
-  }
-  byId('evidFile').addEventListener('change', async (ev)=>{
-    const f = ev.target.files && ev.target.files[0];
-    if(!f){ evidTmp = null; updateEvidUI(); return; }
-    const allowed = ['application/pdf','image/png','image/jpeg'];
-    if(!allowed.includes(f.type)){
-      alert('Solo PDF/PNG/JPG.');
-      ev.target.value = '';
-      evidTmp = null; updateEvidUI(); return;
+
+    async function addFiles(fileList){
+      for(const file of fileList){
+        if(!['application/pdf','image/png','image/jpeg'].includes(file.type)) continue;
+        // comprimir imágenes para ahorrar espacio
+        let blob = file;
+        if(file.type.startsWith('image/')){
+          blob = await compressImage(file, 1600, 85);
+        }
+        const key = `ev:${crypto.randomUUID()}`;
+        await DB.set(key, blob);
+        currentEvidenceKeys.push(key);
+      }
+      renderEvidence();
     }
-    try{
-      const dataUrl = await readFileToDataURL(f);
-      evidTmp = {name:f.name, type:f.type, dataUrl};
-      updateEvidUI();
-    }catch(e){
-      alert('No se pudo cargar la evidencia.');
-      evidTmp = null; updateEvidUI();
+
+    async function compressImage(file, maxW=1600, quality=85){
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      await new Promise(res=>{ img.onload=()=>res(); img.src=url; });
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      return await new Promise(res=> canvas.toBlob(res, 'image/jpeg', quality/100));
     }
-  });
-  byId('evidDel').addEventListener('click', ()=>{
-    byId('evidFile').value = '';
-    evidTmp = null; updateEvidUI();
-  });
-  byId('evidVer').addEventListener('click', ()=>{
-    const d = evidTmp;
-    if(!d){ alert('No hay evidencia cargada.'); return; }
-    try{
-      window.open(d.dataUrl, '_blank');
-    }catch(e){
-      alert('Tu navegador bloqueó la vista previa. Comparte o guarda el PDF del CAPA.');
+
+    async function renderEvidence(){
+      const cont = $('#evidList');
+      cont.innerHTML = '';
+      for(const key of currentEvidenceKeys){
+        const blob = await DB.get(key);
+        if(!blob) continue;
+        const div = document.createElement('div');
+        div.className = 'ev';
+        if(blob.type.startsWith('image/')){
+          const img = document.createElement('img');
+          img.className = 'thumb'; img.alt='';
+          img.src = URL.createObjectURL(blob);
+          div.appendChild(img);
+        } else {
+          const ph = document.createElement('div');
+          ph.className='thumb';
+          ph.style.display='grid'; ph.style.placeItems='center';
+          ph.innerHTML = '<div class="tag">PDF</div>';
+          div.appendChild(ph);
+        }
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = blob.name || (blob.type.startsWith('image/')? 'Imagen' : 'Documento PDF');
+        const size = document.createElement('div'); size.className='size'; size.textContent = `${blob.type.replace('image/','')||'pdf'} · ${bytes(blob.size||0)}`;
+        const row = document.createElement('div'); row.className='actions';
+        const dl = document.createElement('button'); dl.className='ghost'; dl.textContent='Descargar';
+        dl.onclick = ()=> downloadBlob(blob, (blob.name||'evidencia'));
+        const rm = document.createElement('button'); rm.className='danger'; rm.textContent='Eliminar';
+        rm.onclick = async ()=>{ await DB.del(key); currentEvidenceKeys = currentEvidenceKeys.filter(k=>k!==key); renderEvidence(); };
+        row.append(dl, rm);
+        meta.append(name,size,row);
+        div.appendChild(meta);
+        cont.appendChild(div);
+      }
     }
-  });
 
-  // -------- Form helpers --------
-  function getDonde(){ const v = $$('.donde:checked').map(x=>x.value); return v.slice(0,2).join(', '); }
-  function getResp(name, otherSel){ const r = $$(`input[name="${name}"]:checked`)[0]; if(!r) return ''; if(r.value==='Otro'){ const v = $(otherSel).value.trim(); return v? v : 'Otro'; } return r.value; }
-  function getPrevAplicadas(){ return $$('.prev_chk:checked').map(x=>x.value); }
+    function downloadBlob(blob, name){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }
 
-  function readForm(){
-    return {
-      id: byId('id').value.trim(),
-      semana: byId('semana').value,
-      cntr: byId('cntr').value.trim(),
-      cliente: byId('cliente').value.trim(),
-      estado: byId('estado').value,
-      semaforo: getManualSem(),
-      criterio: byId('criterio').value.trim(),
-      quePaso: byId('quePaso').value.trim(),
-      cuando: byId('cuando').value,
-      gravedad: byId('gravedad').value,
-      donde: getDonde(),
-      quien: byId('quien').value,
-      causa: byId('causa').value.trim(),
-      evidencia: byId('evidencia').value.trim(),       // comentario opcional
-      evidenceFile: evidTmp ? {...evidTmp} : null,     // archivo embebido (DataURL)
-      contencion: byId('contencion').value.trim(),
-      respC: getResp('respC','#respC_otro'),
-      fechaC: byId('fechaC').value,
-      definitiva: byId('definitiva').value.trim(),
-      respD: getResp('respD','#respD_otro'),
-      fechaD: byId('fechaD').value,
-      cierre: byId('cierre').value,
-      verif: byId('verif').value.trim(),
-      prev_aplicadas: getPrevAplicadas(),
-      ts: Date.now()
-    };
-  }
+    // ========= Tabla =========
+    function renderTable(){
+      const tbody = $('#tabla tbody');
+      const arr = readCapas();
+      const fE = $('#fEstado').value; const fD = $('#fDonde').value; const fT = ($('#fTexto').value||'').toLowerCase();
+      tbody.innerHTML='';
+      for(const x of arr.filter(x=> (fE?x.estado===fE:true) && (fD?x.donde===fD:true) && JSON.stringify(x).toLowerCase().includes(fT))){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="kbd">${x.id}</span></td>
+          <td>${x.revision??0}</td>
+          <td><span class="state ${x.estado==='Abierta'?'s-open':x.estado==='En contención'?'s-hold':x.estado==='En curso'?'s-run':'s-done'}">${x.estado}</span></td>
+          <td>${fmt(x.fechaDeteccion)}</td>
+          <td>${fmt(x.fechaCierre)}</td>
+          <td>${x.donde||''}</td>
+          <td>${x.tercero||''}</td>
+          <td>
+            <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
+            <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
+            <button class="danger" data-act="borrar" data-id="${x.id}">Borrar</button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+    }
 
-  function validateMinimal(d){
-    const missing=[];
-    if(!d.semana) missing.push('Semana');
-    if(!d.quePaso) missing.push('¿Qué pasó?');
-    if(!d.cuando) missing.push('¿Cuándo?');
-    if(!d.criterio) missing.push('Criterio del semáforo');
-    if(!d.semaforo) missing.push('Semáforo');
-    if(missing.length){ alert('Completa: ' + missing.join(', ')); return false; }
-    return true;
-  }
-
-  // -------- Persistencia --------
-  function loadAll(){ try{ return JSON.parse(localStorage.getItem('capa_entries')||'[]'); }catch{ return []; } }
-  function saveAll(arr){ localStorage.setItem('capa_entries', JSON.stringify(arr)); }
-  function upsert(d){
-    const arr = loadAll();
-    const i = arr.findIndex(x=>x.id===d.id);
-    if(i>=0) arr[i]=d; else arr.unshift(d);
-    saveAll(arr); renderList();
-  }
-
-  // -------- Lista + filtros --------
-  function getFilters(){ return { semana: byId('fSemana').value, cliente: byId('fCliente').value.trim().toLowerCase() }; }
-  function applyFilters(arr){
-    const f = getFilters();
-    return arr.filter(d=>{
-      const okW = !f.semana || (d.semana===f.semana);
-      const okC = !f.cliente || ((d.cliente||'').toLowerCase().includes(f.cliente));
-      return okW && okC;
+    $('#tabla').addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+      const obj = getCapa(id);
+      if(!obj) return;
+      if(act==='editar') loadForm(obj);
+      if(act==='pdf') exportPDF(obj);
+      if(act==='borrar'){
+        if(confirm('¿Eliminar CAPA '+id+'?')){
+          const rest = readCapas().filter(x=>x.id!==id); writeCapas(rest); renderTable();
+        }
+      }
     });
-  }
-  function renderList(){
-    const arrAll = loadAll();
-    const arr = applyFilters(arrAll);
-    const wrap = byId('lista'); wrap.innerHTML = '';
-    byId('countInfo').textContent = arr.length + ' / ' + arrAll.length + ' registros';
-    if(!arr.length){ wrap.innerHTML = '<div class="hint">Sin registros con esos filtros.</div>'; return; }
-    arr.forEach(d=>{
-      const dot = d.semaforo==='Rojo'?'red':(d.semaforo==='Amarillo'?'yellow':'green');
-      const el = document.createElement('div');
-      el.className='item';
-      el.innerHTML = `
-        <div>
-          <strong>${d.id}</strong> — <small>${d.semana||''}</small> — ${d.quePaso || '(sin descripción)'}<br/>
-          <small>${d.cntr?('CNTR '+d.cntr+' · '):''}${d.cliente||''} · ${d.cuando||''} · ${d.donde||''}</small>
-        </div>
-        <div class="row">
-          <span class="dot ${dot}"></span>
-          <button class="btn" data-id="${d.id}" data-act="pdf">PDF</button>
-          <button class="btn" data-id="${d.id}" data-act="load">Abrir</button>
-          <button class="btn" data-id="${d.id}" data-act="dup">Duplicar</button>
-          <button class="btn" data-id="${d.id}" data-act="promover">Promover</button>
-          <button class="btn ghost" data-id="${d.id}" data-act="del">Borrar</button>
-        </div>`;
-      wrap.appendChild(el);
+
+    // ========= Guardado =========
+    $('#btnGuardar').addEventListener('click', ()=>{
+      const obj = collectForm();
+      upsertCapa(obj);
+      $('#capaId').value = obj.id; // asegurar fijo
+      alert('Guardado ✔');
     });
-  }
-  function fillForm(d){
-    byId('id').value=d.id; byId('semana').value=d.semana; byId('cntr').value=d.cntr;
-    byId('cliente').value=d.cliente; byId('estado').value=d.estado;
-    byId('criterio').value=d.criterio||'';
-    byId('quePaso').value=d.quePaso; byId('cuando').value=d.cuando; byId('gravedad').value=d.gravedad||'Menor';
-    $$('.donde').forEach(x=>x.checked = (d.donde||'').split(', ').includes(x.value));
-    byId('quien').value=d.quien; byId('causa').value=d.causa;
-    byId('evidencia').value=d.evidencia||'';
-    evidTmp = d.evidenceFile ? {...d.evidenceFile} : null; updateEvidUI(); byId('evidFile').value='';
-    byId('contencion').value=d.contencion; byId('fechaC').value=d.fechaC;
-    byId('definitiva').value=d.definitiva; byId('fechaD').value=d.fechaD;
-    byId('cierre').value=d.cierre; byId('verif').value=d.verif;
-    $$('input[name="sem"]').forEach(x=>x.checked = (x.value===d.semaforo));
-    renderPrevChecklist();
-    const set = new Set(d.prev_aplicadas||[]);
-    $$('.prev_chk').forEach(cb => cb.checked = set.has(cb.value));
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
 
-  // -------- PDF --------
-  function fmtDate(s){ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(); }catch(e){return s;} }
-  function badge(color,text){ const map={Rojo:'#ff5d5d',Amarillo:'#ffcc00',Verde:'#3bd16f'}; const c=map[color]||'#999'; return `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${c};display:inline-block"></span>${text||color}</span>`; }
-  function mapPrevenciones(ids){
-    const rules = loadRules(); const pick = []; (ids||[]).forEach(rid=>{ const r=rules.find(x=>x.rid===rid); if(r) pick.push(r.texto); });
-    return pick;
-  }
-  function buildPrintCard(d){
-    const prev = mapPrevenciones(d.prev_aplicadas);
-    const prevHTML = prev.length ? ('<ul>' + prev.map(p=>'<li>'+escapeHTML(p)+'</li>').join('') + '</ul>') : '<em>—</em>';
-    const evidLine = d.evidenceFile ? `${escapeHTML(d.evidenceFile.name)} (${escapeHTML(d.evidenceFile.type)})` : '—';
-    const evidNote = d.evidencia ? ' — ' + escapeHTML(d.evidencia) : '';
-    return `
-      <div style="font-size:12px; line-height:1.35">
-        <h2>Tarjeta CAPA — ACONFEX</h2>
-        <div class="rowp"><strong>${d.id}</strong> &nbsp; Semana: <strong>${d.semana||''}</strong> &nbsp; CNTR: <strong>${d.cntr||''}</strong> &nbsp; Cliente: <strong>${d.cliente||''}</strong></div>
-        <div class="rowp"><strong>Semáforo:</strong> ${badge(d.semaforo,d.semaforo)} &nbsp; <em>${escapeHTML(d.criterio||'')}</em></div>
-        <div class="rowp"><strong>¿Qué pasó?</strong> ${escapeHTML(d.quePaso||'')}</div>
-        <div class="rowp"><strong>¿CUÁNDO?</strong> ${d.cuando||''} &nbsp; &nbsp; <strong>¿DÓNDE?</strong> ${d.donde||''} &nbsp; &nbsp; <strong>¿QUIÉN?</strong> ${d.quien||''}</div>
-        <div class="rowp"><strong>Gravedad (matriz):</strong> ${escapeHTML(d.gravedad||'')}</div>
-        <div class="hr"></div>
-        <div class="rowp"><strong>Prevenciones aplicadas:</strong> ${prevHTML}</div>
-        <div class="hr"></div>
-        <div class="rowp"><strong>Causa breve:</strong> ${escapeHTML(d.causa||'')}</div>
-        <div class="rowp"><strong>Evidencia:</strong> ${evidLine}${evidNote}</div>
-        <div class="rowp"><strong>Acción inmediata (hoy):</strong> ${escapeHTML(d.contencion||'')}</div>
-        <div class="rowp"><strong>Resp.:</strong> ${d.respC||''} &nbsp; <strong>Compromiso:</strong> ${fmtDate(d.fechaC)||''}</div>
-        <div class="rowp"><strong>Solución permanente:</strong> ${escapeHTML(d.definitiva||'')}</div>
-        <div class="rowp"><strong>Resp.:</strong> ${d.respD||''} &nbsp; <strong>Compromiso:</strong> ${fmtDate(d.fechaD)||''}</div>
-        <div class="hr"></div>
-        <div class="rowp"><strong>Estado:</strong> ${d.estado||''} &nbsp; &nbsp; <strong>Cierre:</strong> ${fmtDate(d.cierre)||''}</div>
-        <div class="rowp"><strong>Verificación:</strong> ${escapeHTML(d.verif||'')}</div>
-        <div class="hr"></div>
-        <div class="rowp" style="color:#666">Regla del semáforo: peor entre (urgencia por hito) y (gravedad de la matriz).</div>
-      </div>
-    `;
-  }
-  async function toPDF(d, share=false){
-    const modal = byId('printModal'), card = byId('printCard');
-    card.innerHTML = buildPrintCard(d);
-    modal.style.display='flex';
-    await new Promise(r=>setTimeout(r,60));
-    const canvas = await html2canvas(card, {scale:2, background:'#FFFFFF', windowWidth:900});
-    modal.style.display='none';
-    const img = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit:'pt', format:'a4' });
-    const pageW = pdf.internal.pageSize.getWidth(), margin = 28;
-    const w = pageW - margin*2, h = canvas.height * (w/canvas.width);
-    pdf.addImage(img, 'PNG', margin, margin, w, h);
-    const fname = (d.id||'CAPA') + '.pdf';
-    if(share && navigator.canShare){
-      const blob = pdf.output('blob');
-      const file = new File([blob], fname, {type:'application/pdf'});
-      try{ await navigator.share({ files:[file], title:d.id, text:'Tarjeta CAPA'}); }catch(e){}
-      return;
-    }
-    pdf.save(fname);
-  }
-
-  // -------- Eventos --------
-  byId('guardar').addEventListener('click', ()=>{
-    assignIDIfNeeded();
-    const d = readForm();
-    applyAutoSemIfNeeded(); d.semaforo = getManualSem();
-    if(!validateMinimal(d)) return;
-    upsert(d);
-    alert('CAPA guardada: ' + d.id);
-  });
-
-  byId('pdf').addEventListener('click', async ()=>{
-    assignIDIfNeeded();
-    const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
-    if(!validateMinimal(d)) return; await toPDF(d,false);
-  });
-
-  byId('compartir').addEventListener('click', async ()=>{
-    assignIDIfNeeded();
-    const d = readForm(); applyAutoSemIfNeeded(); d.semaforo = getManualSem();
-    if(!validateMinimal(d)) return; await toPDF(d,true);
-  });
-
-  byId('limpiar').addEventListener('click', ()=>{
-    ['cntr','cliente','criterio','quePaso','causa','evidencia','contencion','definitiva','respC_otro','respD_otro','verif'].forEach(id=>{ const el=byId(id); if(el) el.value=''; });
-    ['semana','cuando','quien','estado','gravedad'].forEach(id=>byId(id).value='');
-    ['fechaC','fechaD','cierre'].forEach(id=>byId(id).value='');
-    $$('input[name="sem"]').forEach(x=>x.checked=false);
-    byId('autoSem').checked=false; byId('semManual').style.pointerEvents='auto'; byId('semManual').style.opacity=1;
-    // evidencia
-    evidTmp=null; byId('evidFile').value=''; updateEvidUI();
-    // reset ID sin consumir
-    byId('id').value = ''; initIDPreview();
-    // prevenciones UI
-    byId('prevChecklist').innerHTML=''; byId('prevBlock').style.display='none';
-  });
-
-  byId('resetID').addEventListener('click', ()=>{
-    if(confirm('¿Reiniciar contador de ID?')){
-      localStorage.removeItem('capa_last_id');
-      byId('id').value=''; initIDPreview();
-    }
-  });
-
-  // Filtros/lista
-  byId('fSemana').addEventListener('change', renderList);
-  byId('fCliente').addEventListener('input', renderList);
-  byId('limpiarFiltros').addEventListener('click', ()=>{
-    byId('fSemana').value=''; byId('fCliente').value=''; renderList();
-  });
-
-  byId('lista').addEventListener('click', async (ev)=>{
-    const b = ev.target.closest('button'); if(!b) return;
-    const act = b.dataset.act, id=b.dataset.id;
-    const arr = loadAll(); const d = arr.find(x=>x.id===id);
-    if(!d) return;
-    if(act==='load'){ fillForm(d); }
-    if(act==='pdf'){ await toPDF(d,false); }
-    if(act==='del'){ if(confirm('¿Borrar '+id+'?')){ saveAll(arr.filter(x=>x.id!==id)); renderList(); } }
-    if(act==='dup'){
-      const dup = {...d, id:'', ts:Date.now()};
-      fillForm(dup); initIDPreview();
-      alert('Copia lista para editar. El ID se asignará al Guardar/PDF/Compartir.');
-    }
-    if(act==='promover'){
-      openRuleEditor({
-        rid: null,
-        hito: d.cuando || 'H-48 a Gate-in',
-        texto: d.definitiva ? d.definitiva : (d.quePaso ? ('Evitar recurrencia: ' + d.quePaso) : ''),
-        evidencia: d.evidencia || '',
-        owner: d.respD || 'Max',
-        active: true
-      });
-    }
-  });
-
-  // Reglas globales (UI)
-  const rulesModal = byId('rulesModal');
-  const editModal = byId('editRuleModal');
-  let editingRid = null;
-
-  function openRules(){ renderRulesList(); rulesModal.style.display='flex'; }
-  function closeRules(){ rulesModal.style.display='none'; }
-  byId('openRules').addEventListener('click', openRules);
-  byId('closeRules').addEventListener('click', closeRules);
-
-  function renderRulesList(){
-    const wrap = byId('rulesList'); wrap.innerHTML='';
-    const rules = loadRules();
-    if(!rules.length){ wrap.innerHTML = '<div class="hint">Aún no hay reglas. Crea una con “Nueva regla” o desde una CAPA con “Promover”.</div>'; return; }
-    rules.forEach(r=>{
-      const el = document.createElement('div');
-      el.className='item';
-      el.innerHTML = `
-        <div>
-          <strong>${r.rid}</strong> — <small>${r.hito}</small><br/>
-          ${escapeHTML(r.texto||'(sin texto)')}<br/>
-          <small>Evidencia: ${escapeHTML(r.evidencia||'—')} · Dueño: ${escapeHTML(r.owner||'')}</small>
-        </div>
-        <div class="row">
-          <label class="pill"><input type="checkbox" data-rid="${r.rid}" data-act="toggle" ${r.active?'checked':''}/> Activa</label>
-          <button class="btn" data-rid="${r.rid}" data-act="edit">Editar</button>
-          <button class="btn ghost" data-rid="${r.rid}" data-act="del">Borrar</button>
-        </div>`;
-      wrap.appendChild(el);
+    $('#btnRevision').addEventListener('click', ()=>{
+      const obj = collectForm();
+      obj.revision = (parseInt(obj.revision||0,10) + 1);
+      $('#capaRev').value = obj.revision; $('#revQuick').value = obj.revision;
+      upsertCapa(obj);
+      alert('Guardado como nueva revisión ✔');
     });
-  }
 
-  byId('rulesList').addEventListener('click', (ev)=>{
-    const btn = ev.target.closest('button');
-    const chk = ev.target.closest('input[type="checkbox"][data-act="toggle"]');
-    const rules = loadRules();
-    if(chk){
-      const rid = chk.dataset.rid;
-      const i = rules.findIndex(x=>x.rid===rid);
-      if(i>=0){ rules[i].active = chk.checked; saveRules(rules); renderPrevChecklist(); }
-      return;
+    $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value = $('#revQuick').value; });
+    $('#btnNuevo').addEventListener('click', ()=> clearForm());
+
+    // ========= Filtros =========
+    $('#fEstado').addEventListener('change', renderTable);
+    $('#fDonde').addEventListener('change', renderTable);
+    $('#fTexto').addEventListener('input', renderTable);
+
+    // ========= Backup/Import =========
+    $('#btnBackup').addEventListener('click', ()=>{
+      const data = readCapas();
+      const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      downloadBlob(blob, 'capas_backup.json');
+    });
+    $('#btnImport').addEventListener('click', ()=> $('#importFile').click());
+    $('#importFile').addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const txt = await f.text();
+      try{
+        const arr = JSON.parse(txt); writeCapas(arr); renderTable(); alert('Importado ✔');
+      }catch(err){ alert('Archivo inválido'); }
+    });
+
+    // ========= PDF =========
+    $('#btnPDF').addEventListener('click', async ()=>{
+      const obj = collectForm();
+      await exportPDF(obj);
+    });
+
+    async function exportPDF(obj){
+      // si llamaron desde la tabla, cargar evidencias del registro guardado
+      if(obj && obj.id){
+        currentEvidenceKeys = obj.evidenceKeys || [];
+      }
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({unit:'pt', format:'a4'});
+
+      // Portada / cabecera
+      const margin = 36; let y = margin;
+      pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F');
+      pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38);
+      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+
+      function row(label, value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
+
+      y += 40;
+      row('ID', obj.id);
+      row('Revisión', obj.revision);
+      row('Estado', obj.estado);
+      row('Fecha detección', fmt(obj.fechaDeteccion));
+      row('Fecha cierre comprometida', fmt(obj.fechaCierre));
+      row('¿Dónde?', obj.donde);
+      row('Proveedor/Cliente', obj.tercero);
+      row('Quien reporta', obj.reporta);
+
+      y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
+
+      // Siguiente sección si se ocupa más espacio
+      if(y>700){ pdf.addPage(); y = margin; }
+
+      pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520);
+      y+=6; row('Resp. contención', obj.respContencion); row('Fecha compromiso', fmt(obj.fechaContencion)); row('Completada', obj.doneContencion);
+
+      if(y>700){ pdf.addPage(); y = margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520);
+      y+=6; row('Resp. definitiva', obj.respDefinitiva); row('Fecha compromiso', fmt(obj.fechaDefinitiva)); row('Completada', obj.doneDefinitiva);
+
+      if(y>700){ pdf.addPage(); y = margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}\nPlan de verificación: ${obj.planVerif||''}\nFecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+
+      // Evidencias: miniaturas de imágenes y listado de PDFs
+      const imgs = []; const pdfs = [];
+      for(const key of (obj.evidenceKeys||[])){
+        const blob = await DB.get(key); if(!blob) continue;
+        if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob);
+      }
+
+      if(imgs.length || pdfs.length){
+        if(y>620){ pdf.addPage(); y = margin; }
+        pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      }
+
+      // grid 2xN de imágenes
+      const boxW = 250, boxH = 150, gap = 14; let col = 0; let x = margin;
+      for(const imgBlob of imgs){
+        const dataUrl = await blobToDataURL(imgBlob);
+        const img = await loadImage(dataUrl);
+        const ratio = Math.min(boxW/img.width, boxH/img.height);
+        const w = img.width*ratio, h = img.height*ratio;
+        pdf.addImage(dataUrl, 'JPEG', x + (boxW-w)/2, y + (boxH-h)/2, w, h);
+        pdf.setDrawColor(220); pdf.rect(x, y, boxW, boxH);
+        col++;
+        if(col===2){ col=0; x=margin; y += boxH + gap; if(y>740){ pdf.addPage(); y = margin; } }
+        else { x = margin + boxW + gap; }
+      }
+      if(col!==0){ y += boxH + gap; }
+
+      if(pdfs.length){
+        if(y>740){ pdf.addPage(); y = margin; }
+        pdf.setFont(undefined,'bold'); pdf.text('Documentos PDF (no embebidos):', margin, y); y+=16; pdf.setFont(undefined,'normal');
+        pdf.setFontSize(11);
+        for(const b of pdfs){
+          pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, y);
+          y+=14; if(y>780){ pdf.addPage(); y = margin; }
+        }
+        pdf.setFontSize(12);
+      }
+
+      pdf.save(`${obj.id}-CAPA.pdf`);
     }
-    if(!btn) return;
-    const act = btn.dataset.act, rid = btn.dataset.rid;
-    const i = rules.findIndex(x=>x.rid===rid);
-    if(i<0) return;
-    if(act==='del'){
-      if(confirm('¿Eliminar '+rid+'?')){ rules.splice(i,1); saveRules(rules); renderRulesList(); renderPrevChecklist(); }
+
+    function writeMultiline(pdf, text, x, y, maxWidth){
+      const lines = pdf.splitTextToSize(String(text||''), maxWidth);
+      for(const ln of lines){ pdf.text(ln, x, y); y+=16; }
+      return y;
     }
-    if(act==='edit'){
-      openRuleEditor(rules[i]);
+    function blobToDataURL(blob){
+      return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
     }
-  });
+    function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
 
-  byId('newRule').addEventListener('click', ()=>{
-    openRuleEditor({ rid:null, hito:'H-48 a Gate-in', texto:'', evidencia:'', owner:'Max', active:true });
-  });
-
-  function openRuleEditor(rule){
-    editingRid = rule.rid || null;
-    byId('ruleTitle').textContent = rule.rid ? ('Editar '+rule.rid) : 'Nueva regla';
-    byId('ruleHito').value = rule.hito || 'H-48 a Gate-in';
-    byId('ruleOwner').value = rule.owner || 'Max';
-    byId('ruleActive').checked = (rule.active!==false);
-    byId('ruleTexto').value = rule.texto || '';
-    byId('ruleEvid').value = rule.evidencia || '';
-    editModal.style.display='flex';
-  }
-  function closeRuleEditor(){ editModal.style.display='none'; }
-  byId('cancelRule').addEventListener('click', closeRuleEditor);
-
-  byId('saveRule').addEventListener('click', ()=>{
-    const hito = byId('ruleHito').value;
-    const owner = byId('ruleOwner').value;
-    const active = byId('ruleActive').checked;
-    const texto = byId('ruleTexto').value.trim();
-    const evidencia = byId('ruleEvid').value.trim();
-    if(!texto){ alert('Escribe la regla (1 línea, verificable)'); return; }
-    const rules = loadRules();
-    if(editingRid){
-      const i = rules.findIndex(x=>x.rid===editingRid);
-      if(i>=0){ rules[i] = {...rules[i], hito, owner, active, texto, evidencia}; }
-    }else{
-      rules.unshift({ rid: nextRuleID(), hito, owner, active, texto, evidencia, created_ts: Date.now() });
-    }
-    saveRules(rules);
-    closeRuleEditor();
-    renderRulesList();
-    renderPrevChecklist();
-  });
-
-  // Cerrar modales clic fuera
-  [byId('rulesModal'), byId('editRuleModal'), byId('printModal')].forEach(m=>{
-    m.addEventListener('click', (e)=>{ if(e.target===m) m.style.display='none'; });
-  });
-
-  // Exportar backup
-  byId('exportar').addEventListener('click', ()=>{
-    const data = loadAll();
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='ACONFEX_CAPA_backup.json'; a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  // Inicializar lista
-  renderList();
-})();
-</script>
+    // ========= Init =========
+    clearForm();
+    renderTable();
+  </script>
 </body>
 </html>
