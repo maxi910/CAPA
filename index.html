@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
+  <meta name="description" content="Gestor CAPA simple, auditable ISO 9001. Guarda localmente, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -14,12 +14,15 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";font-size:16px}
+    body.big{font-size:18px}
     .wrap{max-width:1120px;margin:auto;padding:16px}
     header{display:flex;gap:12px;align-items:center;margin:6px 0 16px}
-    header .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header .logo img{width:100%;height:100%;object-fit:contain;border-radius:10px;display:block}
     header h1{font-size:20px;margin:0}
     header .sub{color:var(--muted);font-size:12px}
+    .topbar{margin-left:auto;display:flex;gap:8px;align-items:center}
 
     .grid{display:grid;gap:12px}
     .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -36,16 +39,18 @@
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:8px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
     textarea{min-height:88px;resize:vertical}
+    input[type="checkbox"]{width:auto}
+    input[type="radio"]{width:auto}
 
-    .row{display:flex;gap:8px;align-items:center}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
     .help{border-bottom:1px dotted var(--muted);cursor:pointer}
     .select-trigger{border-bottom:1px dotted var(--muted);cursor:pointer}
 
     .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:40px}
+    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:42px}
     .ghost{background:transparent;border:var(--bd);color:var(--ink)}
     .danger{background:var(--danger)}
     .ok{background:var(--ok)}
@@ -107,10 +112,13 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="logo" aria-hidden="true"></div>
+      <div class="logo" aria-hidden="true"><img src="logo.png" alt="ACONFEX"></div>
       <div>
         <h1>ACONFEX · CAPA</h1>
-        <div class="sub">Correctivas y Preventivas para operaciones de exportación · 100% local (no envía datos)</div>
+        <div class="sub">Correctivas y Preventivas · auditable ISO 9001 · 100% local (no envía datos)</div>
+      </div>
+      <div class="topbar">
+        <label class="row" style="gap:6px"><input id="bigToggle" type="checkbox"> <span class="tag">Modo grande</span></label>
       </div>
     </header>
 
@@ -213,6 +221,16 @@
           </div>
         </div>
 
+        <!-- 8.7 Control de salidas no conformes -->
+        <h3>Control de salida no conforme (cl. 8.7)</h3>
+        <div class="row" role="radiogroup" aria-label="Control de salida no conforme">
+          <label class="row"><input type="radio" name="ctrl87" value="Retener"> Retener</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Reprocesar"> Reprocesar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Concesión"> Aceptar bajo concesión</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Desechar"> Desechar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="" checked> N/A</label>
+        </div>
+
         <div class="grid g2">
           <div>
             <h3>Acción de contención <button type="button" class="help" title="Medida inmediata para contener/mitigar el impacto ahora (ej.: detener embarque del lote, re-etiquetar, aumentar inspección). NO resuelve la causa raíz.">¿Qué es?</button></h3>
@@ -227,9 +245,8 @@
                 <label>Fecha compromiso</label>
                 <input id="fechaContencion" type="date"/>
               </div>
-              <div>
-                <label>Completada</label>
-                <select id="doneContencion"><option>No</option><option>Sí</option></select>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneContencion" type="checkbox"> Completada</label>
               </div>
             </div>
           </div>
@@ -246,9 +263,8 @@
                 <label>Fecha compromiso</label>
                 <input id="fechaDefinitiva" type="date"/>
               </div>
-              <div>
-                <label>Completada</label>
-                <select id="doneDefinitiva"><option>No</option><option>Sí</option></select>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneDefinitiva" type="checkbox"> Completada</label>
               </div>
             </div>
           </div>
@@ -268,6 +284,24 @@
             <label>Fecha verificación</label>
             <input id="fechaVerif" type="date"/>
           </div>
+        </div>
+
+        <div class="row">
+          <label class="row"><input id="actRiesgos" type="checkbox"> Actualiza la matriz de riesgos del SGC</label>
+          <label class="row"><input id="camProc" type="checkbox"> Requiere cambio de procedimiento/documento</label>
+        </div>
+
+        <!-- Checklist ISO esencial -->
+        <h3>Checklist ISO 9001 (mínimos)</h3>
+        <div class="grid g2" id="isoChecklist">
+          <label class="row"><input type="checkbox" data-iso="identificacion"> Identificación de la no conformidad</label>
+          <label class="row"><input type="checkbox" data-iso="contencion"> Control/contención inmediata</label>
+          <label class="row"><input type="checkbox" data-iso="causa"> Investigación y causa raíz</label>
+          <label class="row"><input type="checkbox" data-iso="accion"> Acción correctiva definida</label>
+          <label class="row"><input type="checkbox" data-iso="verificacion"> Verificación de eficacia</label>
+          <label class="row"><input type="checkbox" data-iso="riesgos"> Evaluación de riesgos/cambios</label>
+          <label class="row"><input type="checkbox" data-iso="trazabilidad"> Trazabilidad (ID, revisión, responsable, fechas)</label>
+          <label class="row"><input type="checkbox" data-iso="evidencias"> Evidencias adjuntas</label>
         </div>
 
         <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
@@ -329,7 +363,7 @@
                 <th>Gravedad</th>
                 <th>Prob.</th>
                 <th>Riesgo</th>
-                <th>Proveedor/Cliente</th>
+                <th>8.7</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -339,7 +373,7 @@
       </section>
     </div>
 
-    <div class="footer">Tip: publica este archivo como <span class="kbd">index.html</span> en GitHub Pages. Funciona 100% local (IndexedDB + localStorage).</div>
+    <div class="footer">Publica como <span class="kbd">index.html</span> en GitHub Pages. 100% local (IndexedDB + localStorage). Sube tu <span class="kbd">icon-180.jpg</span> para iPhone.</div>
   </div>
 
   <!-- Modal para vista previa de evidencias y PDF -->
@@ -400,11 +434,17 @@
     function setWeekSelect(n){ const s=$('#semanaSel'); if(n===''||n==null||Number.isNaN(n)) s.value='0'; else s.value=String(Math.max(0,Math.min(52,n))); }
     function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
-    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').value='No'; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').value='No'; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; currentEvidenceKeys=[]; renderEvidence(); }
+    function getCtrl87(){ const el=document.querySelector('input[name="ctrl87"]:checked'); return el? el.value: ''; }
+    function setCtrl87(v){ const el=document.querySelector(`input[name="ctrl87"][value="${v||''}"]`); if(el) el.checked=true; }
 
-    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').value=obj.doneContencion||'No'; $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').value=obj.doneDefinitiva||'No'; $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
+    function getISOChecklist(){ const o={}; $$('#isoChecklist [data-iso]').forEach(cb=>o[cb.dataset.iso]=cb.checked); return o; }
+    function setISOChecklist(o){ $$('#isoChecklist [data-iso]').forEach(cb=> cb.checked = !!(o && o[cb.dataset.iso])); }
 
-    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').value, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').value, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').checked=false; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').checked=false; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; $('#actRiesgos').checked=false; $('#camProc').checked=false; setCtrl87(''); setISOChecklist({}); currentEvidenceKeys=[]; renderEvidence(); }
+
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').checked = (obj.doneContencion===true || obj.doneContencion==='Sí'); $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').checked = (obj.doneDefinitiva===true || obj.doneDefinitiva==='Sí'); $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; $('#actRiesgos').checked=!!obj.actRiesgos; $('#camProc').checked=!!obj.camProc; setCtrl87(obj.control87||''); setISOChecklist(obj.isoChecklist||{}); currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
+
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), control87:getCtrl87(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').checked, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').checked, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, actRiesgos:$('#actRiesgos').checked, camProc:$('#camProc').checked, isoChecklist:getISOChecklist(), evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
 
     $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
 
@@ -441,7 +481,7 @@
           <td>${x.gravedad||'Baja'}</td>
           <td>${x.probabilidad||1}</td>
           <td><span class="risk ${riskClassFromLevel(level)}">${level} · ${score}</span></td>
-          <td>${x.tercero||''}</td>
+          <td>${x.control87||''}</td>
           <td>
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
             <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
@@ -452,15 +492,13 @@
 
     // ========= Guardado y flujos rápidos =========
     $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
-
     $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
-
     $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
-
     $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
 
     $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
     $('#btnNuevo').addEventListener('click', ()=> clearForm());
+    $('#bigToggle').addEventListener('change', (e)=>{ document.body.classList.toggle('big', e.target.checked); localStorage.setItem('capa_ui_big', e.target.checked?'1':'0'); })
 
     // ========= Filtros =========
     $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
@@ -476,19 +514,46 @@
     $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
 
     async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
-      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38); pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14);
+      // Título y semana / riesgo a la derecha
+      pdf.text('ACONFEX · CAPA', margin, 38);
+      pdf.setFontSize(11); pdf.text((obj.semana!=null?`Semana S${String(obj.semana).padStart(2,'0')}`:''), 595-margin-160, 24);
+      pdf.text(`Riesgo: ${obj.riesgoNivel||''} (${obj.riesgoScore||''})`, 595-margin-160, 40);
+      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+
       function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
-      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('Semana',(obj.semana!=null?`S${String(obj.semana).padStart(2,'0')}`:'')); row('¿Dónde?',obj.donde); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Proveedor/Cliente',obj.tercero); row('Quien reporta',obj.reporta);
+      function yesNo(v){ return v? 'Sí':'No'; }
+
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('¿Dónde?',obj.donde); row('Proveedor/Cliente',obj.tercero); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Control 8.7', obj.control87||'N/A');
+
       y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
-      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada',obj.doneContencion);
-      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada',obj.doneDefinitiva);
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada', yesNo(obj.doneContencion));
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada', yesNo(obj.doneDefinitiva));
+
       if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
 Plan de verificación: ${obj.planVerif||''}
 Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Actualizaciones al SGC', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, `Actualiza matriz de riesgos: ${yesNo(obj.actRiesgos)}
+Cambio de procedimiento/documento: ${yesNo(obj.camProc)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Checklist ISO 9001 (mínimos)', margin, y); y+=14; pdf.setFont(undefined,'normal');
+      const iso=obj.isoChecklist||{}; const isoItems=[
+        ['Identificación', iso.identificacion], ['Contención', iso.contencion], ['Causa raíz', iso.causa], ['Acción correctiva', iso.accion], ['Verificación eficacia', iso.verificacion], ['Riesgos/cambios', iso.riesgos], ['Trazabilidad', iso.trazabilidad], ['Evidencias', iso.evidencias]
+      ];
+      for(const [k,v] of isoItems){ row(k, yesNo(!!v)); }
+
+      // Evidencias
       const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
       if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
       const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
       if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
+
       const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
     }
 
@@ -498,6 +563,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     // ========= Init =========
     fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
+    // Restaurar modo grande
+    const big = localStorage.getItem('capa_ui_big')==='1'; document.getElementById('bigToggle').checked=big; document.body.classList.toggle('big', big);
   </script>
 </body>
 </html>
@@ -507,7 +574,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ACONFEX · CAPA (Acciones Correctivas y Preventivas)</title>
-  <meta name="description" content="Gestor CAPA simple para operaciones de exportación (GFA/ACONFEX). Guarda localmente, exporta a PDF y maneja evidencias con vista previa. Incluye matriz de riesgo (gravedad x probabilidad)." />
+  <meta name="description" content="Gestor CAPA simple, auditable ISO 9001. Guarda localmente, exporta a PDF e incrusta evidencias (imágenes y PDFs). Matriz de riesgo, checklist ISO y flujos de revisión/cierre." />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.jpg?v=1">
   <style>
     :root{
       --bg:#0b0f14; --panel:#121821; --ink:#e9edf2; --muted:#9fb0c3; --brand:#3fb389;
@@ -516,12 +584,15 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";font-size:16px}
+    body.big{font-size:18px}
     .wrap{max-width:1120px;margin:auto;padding:16px}
     header{display:flex;gap:12px;align-items:center;margin:6px 0 16px}
-    header .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#1b6c50 60%)}
+    header .logo img{width:100%;height:100%;object-fit:contain;border-radius:10px;display:block}
     header h1{font-size:20px;margin:0}
     header .sub{color:var(--muted);font-size:12px}
+    .topbar{margin-left:auto;display:flex;gap:8px;align-items:center}
 
     .grid{display:grid;gap:12px}
     .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -538,16 +609,18 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     .card h2{font-size:16px;margin:0 0 8px}
     .card h3{font-size:14px;margin:18px 0 8px;color:var(--muted)}
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:8px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
+    input,select,textarea{width:100%;background:#0e141d;border:var(--bd);color:var(--ink);padding:10px;border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;font-size:16px}
     textarea{min-height:88px;resize:vertical}
+    input[type="checkbox"]{width:auto}
+    input[type="radio"]{width:auto}
 
-    .row{display:flex;gap:8px;align-items:center}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .tag{font-size:11px;background:#0e141d;border:var(--bd);border-radius:999px;padding:4px 8px;color:var(--muted)}
     .help{border-bottom:1px dotted var(--muted);cursor:pointer}
     .select-trigger{border-bottom:1px dotted var(--muted);cursor:pointer}
 
     .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:40px}
+    button{background:var(--accent);border:none;border-radius:12px;padding:10px 12px;color:white;cursor:pointer;min-height:42px}
     .ghost{background:transparent;border:var(--bd);color:var(--ink)}
     .danger{background:var(--danger)}
     .ok{background:var(--ok)}
@@ -609,10 +682,13 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 <body>
   <div class="wrap">
     <header>
-      <div class="logo" aria-hidden="true"></div>
+      <div class="logo" aria-hidden="true"><img src="logo.png" alt="ACONFEX"></div>
       <div>
         <h1>ACONFEX · CAPA</h1>
-        <div class="sub">Correctivas y Preventivas para operaciones de exportación · 100% local (no envía datos)</div>
+        <div class="sub">Correctivas y Preventivas · auditable ISO 9001 · 100% local (no envía datos)</div>
+      </div>
+      <div class="topbar">
+        <label class="row" style="gap:6px"><input id="bigToggle" type="checkbox"> <span class="tag">Modo grande</span></label>
       </div>
     </header>
 
@@ -715,6 +791,16 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
           </div>
         </div>
 
+        <!-- 8.7 Control de salidas no conformes -->
+        <h3>Control de salida no conforme (cl. 8.7)</h3>
+        <div class="row" role="radiogroup" aria-label="Control de salida no conforme">
+          <label class="row"><input type="radio" name="ctrl87" value="Retener"> Retener</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Reprocesar"> Reprocesar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Concesión"> Aceptar bajo concesión</label>
+          <label class="row"><input type="radio" name="ctrl87" value="Desechar"> Desechar</label>
+          <label class="row"><input type="radio" name="ctrl87" value="" checked> N/A</label>
+        </div>
+
         <div class="grid g2">
           <div>
             <h3>Acción de contención <button type="button" class="help" title="Medida inmediata para contener/mitigar el impacto ahora (ej.: detener embarque del lote, re-etiquetar, aumentar inspección). NO resuelve la causa raíz.">¿Qué es?</button></h3>
@@ -729,9 +815,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
                 <label>Fecha compromiso</label>
                 <input id="fechaContencion" type="date"/>
               </div>
-              <div>
-                <label>Completada</label>
-                <select id="doneContencion"><option>No</option><option>Sí</option></select>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneContencion" type="checkbox"> Completada</label>
               </div>
             </div>
           </div>
@@ -748,9 +833,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
                 <label>Fecha compromiso</label>
                 <input id="fechaDefinitiva" type="date"/>
               </div>
-              <div>
-                <label>Completada</label>
-                <select id="doneDefinitiva"><option>No</option><option>Sí</option></select>
+              <div class="row" style="margin-top:30px">
+                <label class="row"><input id="doneDefinitiva" type="checkbox"> Completada</label>
               </div>
             </div>
           </div>
@@ -770,6 +854,24 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
             <label>Fecha verificación</label>
             <input id="fechaVerif" type="date"/>
           </div>
+        </div>
+
+        <div class="row">
+          <label class="row"><input id="actRiesgos" type="checkbox"> Actualiza la matriz de riesgos del SGC</label>
+          <label class="row"><input id="camProc" type="checkbox"> Requiere cambio de procedimiento/documento</label>
+        </div>
+
+        <!-- Checklist ISO esencial -->
+        <h3>Checklist ISO 9001 (mínimos)</h3>
+        <div class="grid g2" id="isoChecklist">
+          <label class="row"><input type="checkbox" data-iso="identificacion"> Identificación de la no conformidad</label>
+          <label class="row"><input type="checkbox" data-iso="contencion"> Control/contención inmediata</label>
+          <label class="row"><input type="checkbox" data-iso="causa"> Investigación y causa raíz</label>
+          <label class="row"><input type="checkbox" data-iso="accion"> Acción correctiva definida</label>
+          <label class="row"><input type="checkbox" data-iso="verificacion"> Verificación de eficacia</label>
+          <label class="row"><input type="checkbox" data-iso="riesgos"> Evaluación de riesgos/cambios</label>
+          <label class="row"><input type="checkbox" data-iso="trazabilidad"> Trazabilidad (ID, revisión, responsable, fechas)</label>
+          <label class="row"><input type="checkbox" data-iso="evidencias"> Evidencias adjuntas</label>
         </div>
 
         <h3>Evidencias (PDF/JPG/PNG) <span class="tag">se guardan localmente</span></h3>
@@ -831,7 +933,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
                 <th>Gravedad</th>
                 <th>Prob.</th>
                 <th>Riesgo</th>
-                <th>Proveedor/Cliente</th>
+                <th>8.7</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -841,7 +943,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
       </section>
     </div>
 
-    <div class="footer">Tip: publica este archivo como <span class="kbd">index.html</span> en GitHub Pages. Funciona 100% local (IndexedDB + localStorage).</div>
+    <div class="footer">Publica como <span class="kbd">index.html</span> en GitHub Pages. 100% local (IndexedDB + localStorage). Sube tu <span class="kbd">icon-180.jpg</span> para iPhone.</div>
   </div>
 
   <!-- Modal para vista previa de evidencias y PDF -->
@@ -902,11 +1004,17 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     function setWeekSelect(n){ const s=$('#semanaSel'); if(n===''||n==null||Number.isNaN(n)) s.value='0'; else s.value=String(Math.max(0,Math.min(52,n))); }
     function getWeekNumber(){ return parseInt($('#semanaSel').value,10); }
 
-    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').value='No'; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').value='No'; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; currentEvidenceKeys=[]; renderEvidence(); }
+    function getCtrl87(){ const el=document.querySelector('input[name="ctrl87"]:checked'); return el? el.value: ''; }
+    function setCtrl87(v){ const el=document.querySelector(`input[name="ctrl87"][value="${v||''}"]`); if(el) el.checked=true; }
 
-    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').value=obj.doneContencion||'No'; $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').value=obj.doneDefinitiva||'No'; $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
+    function getISOChecklist(){ const o={}; $$('#isoChecklist [data-iso]').forEach(cb=>o[cb.dataset.iso]=cb.checked); return o; }
+    function setISOChecklist(o){ $$('#isoChecklist [data-iso]').forEach(cb=> cb.checked = !!(o && o[cb.dataset.iso])); }
 
-    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').value, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').value, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
+    function clearForm(){ currentEditingId=null; $('#formCard').classList.remove('pulse'); $('#capaId').value=''; $('#capaRev').value=0; $('#revQuick').value=0; $('#capaEstado').value='Abierta'; $('#fechaDeteccion').value=''; $('#fechaCierre').value=''; setWeekSelect(0); $('#donde').value='Campo'; $('#tercero').value=''; $('#gravedad').value='Baja'; $('#probabilidad').value='1'; updateRiskPill(); $('#reporta').value=''; $('#desc').value=''; $('#accionContencion').value=''; $('#respContencion').value=''; $('#fechaContencion').value=''; $('#doneContencion').checked=false; $('#accionDefinitiva').value=''; $('#respDefinitiva').value=''; $('#fechaDefinitiva').value=''; $('#doneDefinitiva').checked=false; $('#causaRaiz').value=''; $('#planVerif').value=''; $('#fechaVerif').value=''; $('#actRiesgos').checked=false; $('#camProc').checked=false; setCtrl87(''); setISOChecklist({}); currentEvidenceKeys=[]; renderEvidence(); }
+
+    function loadForm(obj){ currentEditingId=obj.id; $('#capaId').value=obj.id; $('#capaRev').value=obj.revision||0; $('#revQuick').value=obj.revision||0; $('#capaEstado').value=obj.estado||'Abierta'; $('#fechaDeteccion').value=obj.fechaDeteccion||''; $('#fechaCierre').value=obj.fechaCierre||''; setWeekSelect(typeof obj.semana==='number'?obj.semana:0); $('#donde').value=obj.donde||'Campo'; $('#tercero').value=obj.tercero||''; $('#gravedad').value=obj.gravedad||'Baja'; $('#probabilidad').value=String(obj.probabilidad||1); updateRiskPill(); $('#reporta').value=obj.reporta||''; $('#desc').value=obj.desc||''; $('#accionContencion').value=obj.accionContencion||''; $('#respContencion').value=obj.respContencion||''; $('#fechaContencion').value=obj.fechaContencion||''; $('#doneContencion').checked = (obj.doneContencion===true || obj.doneContencion==='Sí'); $('#accionDefinitiva').value=obj.accionDefinitiva||''; $('#respDefinitiva').value=obj.respDefinitiva||''; $('#fechaDefinitiva').value=obj.fechaDefinitiva||''; $('#doneDefinitiva').checked = (obj.doneDefinitiva===true || obj.doneDefinitiva==='Sí'); $('#causaRaiz').value=obj.causaRaiz||''; $('#planVerif').value=obj.planVerif||''; $('#fechaVerif').value=obj.fechaVerif||''; $('#actRiesgos').checked=!!obj.actRiesgos; $('#camProc').checked=!!obj.camProc; setCtrl87(obj.control87||''); setISOChecklist(obj.isoChecklist||{}); currentEvidenceKeys=Array.isArray(obj.evidenceKeys)?[...obj.evidenceKeys]:[]; renderEvidence(); document.getElementById('formCard').scrollIntoView({behavior:'smooth'}); $('#formCard').classList.add('pulse'); setTimeout(()=>$('#formCard').classList.remove('pulse'),1400); }
+
+    function collectForm(){ const id=$('#capaId').value||nextId(); const g=$('#gravedad').value; const p=$('#probabilidad').value; const risk=calcRisk(g,p); const obj={ id, revision:parseInt($('#capaRev').value||'0',10), estado:$('#capaEstado').value, fechaDeteccion:$('#fechaDeteccion').value, fechaCierre:$('#fechaCierre').value, semana:getWeekNumber(), donde:$('#donde').value, tercero:$('#tercero').value.trim(), gravedad:g, probabilidad:parseInt(p,10), riesgoScore:risk.score, riesgoNivel:risk.level, reporta:$('#reporta').value.trim(), desc:$('#desc').value.trim(), control87:getCtrl87(), accionContencion:$('#accionContencion').value.trim(), respContencion:$('#respContencion').value.trim(), fechaContencion:$('#fechaContencion').value, doneContencion:$('#doneContencion').checked, accionDefinitiva:$('#accionDefinitiva').value.trim(), respDefinitiva:$('#respDefinitiva').value.trim(), fechaDefinitiva:$('#fechaDefinitiva').value, doneDefinitiva:$('#doneDefinitiva').checked, causaRaiz:$('#causaRaiz').value.trim(), planVerif:$('#planVerif').value.trim(), fechaVerif:$('#fechaVerif').value, actRiesgos:$('#actRiesgos').checked, camProc:$('#camProc').checked, isoChecklist:getISOChecklist(), evidenceKeys:[...currentEvidenceKeys], updatedAt:new Date().toISOString() }; return obj; }
 
     $('#gravedad').addEventListener('change', updateRiskPill); $('#probabilidad').addEventListener('change', updateRiskPill);
 
@@ -943,7 +1051,7 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
           <td>${x.gravedad||'Baja'}</td>
           <td>${x.probabilidad||1}</td>
           <td><span class="risk ${riskClassFromLevel(level)}">${level} · ${score}</span></td>
-          <td>${x.tercero||''}</td>
+          <td>${x.control87||''}</td>
           <td>
             <button class="ghost" data-act="editar" data-id="${x.id}">Editar</button>
             <button class="ghost" data-act="pdf" data-id="${x.id}">PDF</button>
@@ -954,15 +1062,13 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     // ========= Guardado y flujos rápidos =========
     $('#btnGuardar').addEventListener('click', ()=>{ const obj=collectForm(); upsertCapa(obj); $('#capaId').value=obj.id; currentEditingId=obj.id; alert('Actualizado ✔'); });
-
     $('#btnRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; upsertCapa(obj); currentEditingId=obj.id; alert('Guardado como nueva revisión ✔'); });
-
     $('#btnEnviarRevision').addEventListener('click', ()=>{ const obj=collectForm(); obj.revision=(parseInt(obj.revision||0,10)+1); obj.estado='En revisión'; $('#capaRev').value=obj.revision; $('#revQuick').value=obj.revision; $('#capaEstado').value='En revisión'; upsertCapa(obj); alert('Enviado a revisión ✔'); });
-
     $('#btnCerrar').addEventListener('click', ()=>{ const obj=collectForm(); obj.estado='Cerrada'; $('#capaEstado').value='Cerrada'; upsertCapa(obj); alert('Marcada como cerrada ✔'); });
 
     $('#revQuick').addEventListener('input', ()=>{ $('#capaRev').value=$('#revQuick').value; });
     $('#btnNuevo').addEventListener('click', ()=> clearForm());
+    $('#bigToggle').addEventListener('change', (e)=>{ document.body.classList.toggle('big', e.target.checked); localStorage.setItem('capa_ui_big', e.target.checked?'1':'0'); })
 
     // ========= Filtros =========
     $('#fEstado').addEventListener('change', renderTable); $('#fDonde').addEventListener('change', renderTable); $('#fTexto').addEventListener('input', renderTable);
@@ -978,19 +1084,46 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
     $('#btnPDFShare').addEventListener('click', async ()=>{ const obj=collectForm(); const {blob,name}=await exportPDF(obj,{returnBlob:true}); const file=new File([blob],name,{type:'application/pdf'}); if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name, text:'CAPA generado desde ACONFEX CAPA'});}catch(e){} } else { const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),10000); alert('Compartir no soportado por el navegador. Se abrió el PDF en una pestaña.'); } });
 
     async function exportPDF(obj, opts={save:false, returnBlob:false}){ const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:'pt', format:'a4'}); if(obj && obj.id){ currentEvidenceKeys=obj.evidenceKeys||[]; }
-      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14); pdf.text('ACONFEX · CAPA', margin, 38); pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+      const margin=36; let y=margin; pdf.setFillColor(15,22,32); pdf.rect(0,0,595,60,'F'); pdf.setTextColor(255,255,255); pdf.setFontSize(14);
+      // Título y semana / riesgo a la derecha
+      pdf.text('ACONFEX · CAPA', margin, 38);
+      pdf.setFontSize(11); pdf.text((obj.semana!=null?`Semana S${String(obj.semana).padStart(2,'0')}`:''), 595-margin-160, 24);
+      pdf.text(`Riesgo: ${obj.riesgoNivel||''} (${obj.riesgoScore||''})`, 595-margin-160, 40);
+      pdf.setTextColor(0,0,0); pdf.setFontSize(12);
+
       function row(label,value){ pdf.setFont(undefined,'bold'); pdf.text(label, margin, y); pdf.setFont(undefined,'normal'); pdf.text(String(value||''), 200, y); y+=18; }
-      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('Semana',(obj.semana!=null?`S${String(obj.semana).padStart(2,'0')}`:'')); row('¿Dónde?',obj.donde); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Proveedor/Cliente',obj.tercero); row('Quien reporta',obj.reporta);
+      function yesNo(v){ return v? 'Sí':'No'; }
+
+      y += 40; row('ID',obj.id); row('Revisión',obj.revision); row('Estado',obj.estado); row('Fecha detección',fmt(obj.fechaDeteccion)); row('Fecha cierre comprometida',fmt(obj.fechaCierre)); row('¿Dónde?',obj.donde); row('Proveedor/Cliente',obj.tercero); row('Gravedad',obj.gravedad); row('Probabilidad',obj.probabilidad); row('Riesgo (S×P)',`${obj.riesgoNivel} · ${obj.riesgoScore}`); row('Control 8.7', obj.control87||'N/A');
+
       y+=10; pdf.setFont(undefined,'bold'); pdf.text('Descripción del problema', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.desc||'', margin, y, 520);
-      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada',obj.doneContencion);
-      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada',obj.doneDefinitiva);
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción de contención (mitiga ahora)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionContencion||'', margin, y, 520); y+=6; row('Resp. contención',obj.respContencion); row('Fecha compromiso',fmt(obj.fechaContencion)); row('Completada', yesNo(obj.doneContencion));
+
+      if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Acción definitiva (corrige causa raíz)', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, obj.accionDefinitiva||'', margin, y, 520); y+=6; row('Resp. definitiva',obj.respDefinitiva); row('Fecha compromiso',fmt(obj.fechaDefinitiva)); row('Completada', yesNo(obj.doneDefinitiva));
+
       if(y>700){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Causa raíz y verificación', margin, y); y+=12; pdf.setFont(undefined,'normal'); y = writeMultiline(pdf, `Causa raíz: ${obj.causaRaiz||''}
 Plan de verificación: ${obj.planVerif||''}
 Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Actualizaciones al SGC', margin, y); y+=12; pdf.setFont(undefined,'normal');
+      y = writeMultiline(pdf, `Actualiza matriz de riesgos: ${yesNo(obj.actRiesgos)}
+Cambio de procedimiento/documento: ${yesNo(obj.camProc)}`, margin, y, 520);
+
+      if(y>700){ pdf.addPage(); y=margin; }
+      pdf.setFont(undefined,'bold'); pdf.text('Checklist ISO 9001 (mínimos)', margin, y); y+=14; pdf.setFont(undefined,'normal');
+      const iso=obj.isoChecklist||{}; const isoItems=[
+        ['Identificación', iso.identificacion], ['Contención', iso.contencion], ['Causa raíz', iso.causa], ['Acción correctiva', iso.accion], ['Verificación eficacia', iso.verificacion], ['Riesgos/cambios', iso.riesgos], ['Trazabilidad', iso.trazabilidad], ['Evidencias', iso.evidencias]
+      ];
+      for(const [k,v] of isoItems){ row(k, yesNo(!!v)); }
+
+      // Evidencias
       const imgs=[]; const pdfs=[]; const keySet=new Set([...(obj.evidenceKeys||[]), ...currentEvidenceKeys]); for(const key of keySet){ const blob=await DB.get(key); if(!blob) continue; if(blob.type.startsWith('image/')) imgs.push(blob); else if(blob.type==='application/pdf') pdfs.push(blob); }
       if(imgs.length || pdfs.length){ if(y>620){ pdf.addPage(); y=margin; } pdf.setFont(undefined,'bold'); pdf.text('Evidencias', margin, y); y+=12; pdf.setFont(undefined,'normal'); }
       const boxW=250, boxH=150, gap=14; let col=0; let x=margin; for(const imgBlob of imgs){ const dataUrl=await blobToDataURL(imgBlob); const img=await loadImage(dataUrl); const ratio=Math.min(boxW/img.width, boxH/img.height); const w=img.width*ratio, h=img.height*ratio; const fmtI=dataUrl.startsWith('data:image/png')?'PNG':'JPEG'; pdf.addImage(dataUrl, fmtI, x+(boxW-w)/2, y+(boxH-h)/2, w, h); pdf.setDrawColor(220); pdf.rect(x,y,boxW,boxH); col++; if(col===2){ col=0; x=margin; y+=boxH+gap; if(y>740){ pdf.addPage(); y=margin; } } else { x=margin+boxW+gap; } } if(col!==0){ y+=boxH+gap; }
       if(pdfs.length && window['pdfjsLib']){ for(const pblob of pdfs){ try{ const ab=await pblob.arrayBuffer(); const doc=await pdfjsLib.getDocument({data:ab}).promise; const total=doc.numPages; for(let i=1;i<=total;i++){ const page=await doc.getPage(i); const viewport=page.getViewport({scale:1}); const maxW=595 - margin*2; const scale=maxW/viewport.width; const v2=page.getViewport({scale}); const canvas=document.createElement('canvas'); canvas.width=Math.ceil(v2.width); canvas.height=Math.ceil(v2.height); const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx, viewport:v2}).promise; const dataUrl=canvas.toDataURL('image/png'); pdf.addPage(); pdf.setFont(undefined,'bold'); pdf.text((pblob.name||'Documento PDF')+` — pág ${i}/${total}`, margin, margin-10); pdf.addImage(dataUrl,'PNG', margin, margin, v2.width, v2.height); } }catch(err){ pdf.addPage(); pdf.text('No se pudo incrustar un PDF de evidencia. Nombre: '+(pblob.name||'PDF'), margin, margin); } } } else if(pdfs.length){ pdf.addPage(); pdf.text('PDFs adjuntos (no embebidos):', margin, margin); let yy=margin+18; pdf.setFontSize(11); for(const b of pdfs){ pdf.text('• '+(b.name||'Documento PDF')+` — ${bytes(b.size||0)}`, margin, yy); yy+=14; } pdf.setFontSize(12); }
+
       const name=`${obj.id}-CAPA.pdf`; if(opts.returnBlob){ const blob=pdf.output('blob'); return {blob,name}; } if(opts.save){ pdf.save(name); }
     }
 
@@ -1000,6 +1133,8 @@ Fecha verificación: ${fmt(obj.fechaVerif)}`, margin, y, 520);
 
     // ========= Init =========
     fillWeekSelect(); clearForm(); renderTable(); setupHelpTips();
+    // Restaurar modo grande
+    const big = localStorage.getItem('capa_ui_big')==='1'; document.getElementById('bigToggle').checked=big; document.body.classList.toggle('big', big);
   </script>
 </body>
 </html>
